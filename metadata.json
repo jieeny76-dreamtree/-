@@ -1,0 +1,7 @@
+{
+  "name": "Copy of 꿈뜨레 지역공동체 홈페이지",
+  "description": "꿈뜨레 지역공동체(Kkumttre Community) 비영리민간단체를 위한 공식 웹사이트입니다. 단체소개, 주요사업, 공지사항 기능을 제공합니다.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
