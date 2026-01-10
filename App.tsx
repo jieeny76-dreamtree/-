@@ -9,35 +9,46 @@ import History from './pages/Intro/History';
 import BoardList from './pages/Board/BoardList';
 import PostWrite from './pages/Board/PostWrite';
 import PostView from './pages/Board/PostView';
-import { NAVIGATION } from './constants';
 
 const Breadcrumb: React.FC = () => {
   const location = useLocation();
-  const pathParts = location.pathname.split('/').filter(p => p);
+  const path = location.pathname;
   
-  // Find current menu name
-  let title = "꿈뜨레";
-  if (pathParts[0] === 'intro') {
-    title = pathParts[1] === 'greetings' ? '대표인사말' : '연혁';
-  } else if (pathParts[0] === 'board') {
-    title = pathParts[1] === 'projects' ? '주요사업' : '공지사항';
-  }
+  if (path === '/' || path === '') return null;
 
-  if (location.pathname === '/' || pathParts.length === 0) return null;
+  let category = "";
+  let pageName = "";
+
+  if (path.includes('/intro/')) {
+    category = "단체소개";
+    pageName = path.includes('greetings') ? "대표인사말" : "연혁";
+  } else if (path.includes('/board/')) {
+    category = path.includes('projects') ? "주요사업" : "공지사항";
+    pageName = path.includes('write') ? "글쓰기" : path.includes('view') ? "상세보기" : "목록";
+  }
 
   return (
     <div className="bg-white border-b border-gray-100 mb-8 py-4">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center text-sm text-gray-500">
-        <span>홈</span>
+        <span className="hover:text-purple-600 cursor-pointer" onClick={() => window.location.hash = '#'}>홈</span>
         <span className="mx-2">/</span>
-        {pathParts[0] === 'intro' ? (
+        {category && (
           <>
-            <span>단체소개</span>
+            <span>{category}</span>
             <span className="mx-2">/</span>
           </>
-        ) : null}
-        <span className="font-bold text-purple-700">{title}</span>
+        )}
+        <span className="font-bold text-purple-700">{pageName}</span>
       </div>
+    </div>
+  );
+};
+
+const PageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20">
+      <Breadcrumb />
+      {children}
     </div>
   );
 };
@@ -50,27 +61,21 @@ const App: React.FC = () => {
         
         <main className="flex-grow">
           <Routes>
+            {/* Main Page */}
             <Route path="/" element={<Home />} />
             
-            {/* Page layout for interior pages */}
-            <Route path="*" element={
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-20">
-                <Breadcrumb />
-                <Routes>
-                  {/* Intro */}
-                  <Route path="intro/greetings" element={<Greetings />} />
-                  <Route path="intro/history" element={<History />} />
-                  
-                  {/* Board */}
-                  <Route path="board/:type" element={<BoardList />} />
-                  <Route path="board/:type/write" element={<PostWrite />} />
-                  <Route path="board/:type/view/:id" element={<PostView />} />
-                  
-                  {/* Redirects */}
-                  <Route path="intro" element={<Navigate to="/intro/greetings" replace />} />
-                </Routes>
-              </div>
-            } />
+            {/* Intro Pages */}
+            <Route path="/intro/greetings" element={<PageLayout><Greetings /></PageLayout>} />
+            <Route path="/intro/history" element={<PageLayout><History /></PageLayout>} />
+            <Route path="/intro" element={<Navigate to="/intro/greetings" replace />} />
+            
+            {/* Board Pages */}
+            <Route path="/board/:type" element={<PageLayout><BoardList /></PageLayout>} />
+            <Route path="/board/:type/write" element={<PageLayout><PostWrite /></PageLayout>} />
+            <Route path="/board/:type/view/:id" element={<PageLayout><PostView /></PageLayout>} />
+            
+            {/* 404 Redirect to Home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
 
