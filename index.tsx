@@ -15,8 +15,9 @@ import {
   Heart, MapPin, ArrowRight, Bell, Camera, ChevronRight, 
   Search, Newspaper, Menu, X, ChevronDown, 
   Phone, Mail, Instagram, Facebook, Globe, Plus, FileText, 
-  Trash2, Calendar, User, Save, ClipboardCheck,
-  Gift, Receipt, Edit3, Quote, ExternalLink, Image as ImageIcon, Loader2
+  Trash2, Calendar, User, Users, Save, ClipboardCheck,
+  Gift, Receipt, Edit3, Quote, ExternalLink, Image as ImageIcon, Loader2,
+  Sparkles, ShieldCheck, Flower2, Download, Paperclip
 } from 'lucide-react';
 
 // --- Types ---
@@ -29,8 +30,10 @@ interface Post {
   content: string;
   author: string;
   createdAt: number;
-  imageUrl?: string; // Main representative image
-  imageUrls?: string[]; // Multiple images array
+  imageUrl?: string; 
+  imageUrls?: string[]; 
+  fileName?: string;
+  fileData?: string;
 }
 
 interface SiteSettings {
@@ -40,8 +43,8 @@ interface SiteSettings {
 }
 
 // --- Constants ---
-const STORAGE_KEY = 'kkumttre_posts_v2';
-const SETTINGS_KEY = 'kkumttre_settings_v2';
+const STORAGE_KEY = 'kkumttre_posts_v3';
+const SETTINGS_KEY = 'kkumttre_settings_v3';
 
 const DEFAULT_SETTINGS: SiteSettings = {
   bankName: '농협은행',
@@ -86,21 +89,19 @@ const compressImage = (file: File): Promise<string> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1000; // Limit width for storage efficiency
+        const MAX_WIDTH = 800; // 용량 확보를 위해 해상도 최적화
         let width = img.width;
         let height = img.height;
-
         if (width > MAX_WIDTH) {
           height = (height * MAX_WIDTH) / width;
           width = MAX_WIDTH;
         }
-
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        // Compress to JPEG with 0.7 quality
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        // 압축률을 0.6으로 설정하여 여러 장 저장 가능하도록 최적화
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
       };
     };
   });
@@ -124,7 +125,7 @@ const useBoardStore = () => {
       setPosts(next);
       return true;
     } catch (e) {
-      alert('저장 용량이 부족합니다. 사진 크기를 줄이거나 기존 게시글을 삭제해 주세요.');
+      alert('브라우저 저장 공간이 부족합니다. 사진 장수를 줄이거나 기존 게시글을 삭제해 주세요.');
       return false;
     }
   }, [posts]);
@@ -212,7 +213,6 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-      {/* Mobile Menu */}
       <div className={`fixed inset-0 bg-white z-[100] transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
@@ -302,7 +302,7 @@ const Footer = () => (
               <MapPin className="h-5 w-5 text-purple-400 mr-3 shrink-0 mt-1" />
               <div>
                 <span className="text-white block font-semibold">현) 경남 창원시 마산회원구 내서읍 삼계6길 40 202호</span>
-                <span className="text-[11px] text-gray-600 italic">이전) 경남 창원시 마산회원구 내서읍 삼계6길 12 301호</span>
+                <span className="text-[11px] text-gray-500 italic">이전) 경남 창원시 마산회원구 내서읍 삼계6길 12 301호</span>
               </div>
             </li>
             <li className="flex items-center"><Phone className="h-5 w-5 text-purple-400 mr-3" /> 055-232-5412</li>
@@ -331,7 +331,7 @@ const Home = () => {
         </div>
         <div className="relative max-w-4xl mx-auto px-4">
           <div className="inline-block bg-white/10 backdrop-blur-md p-4 rounded-full mb-8 border border-white/20"><Logo className="h-16 w-16" /></div>
-          <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tighter">꿈을 심고 행복을 가꾸는<br/><span className="text-yellow-400">꿈뜨레 지역공동체</span></h1>
+          <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tighter leading-tight">꿈을 심고 행복을 가꾸는<br/><span className="text-yellow-400">꿈뜨레 지역공동체</span></h1>
           <p className="text-xl md:text-2xl text-purple-100 mb-12 font-light">아이들이 안전하고 이웃이 서로를 살피는 따뜻한 마을을 만듭니다.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link to="/intro/greetings" className="bg-yellow-500 text-purple-900 px-10 py-5 rounded-full font-bold text-xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center">인사말 보기 <ArrowRight className="ml-2 h-6 w-6" /></Link>
@@ -363,29 +363,21 @@ const Home = () => {
                 <Link to="/board/projects" className="text-sm text-gray-400 hover:text-purple-600">더보기 +</Link>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {latestProjects.length > 0 ? latestProjects.map(post => (
-                  <Link key={post.id} to={`/board/projects/view/${post.id}`} className="aspect-video bg-gray-100 rounded-2xl overflow-hidden relative group">
-                    <img src={post.imageUrl || 'https://images.unsplash.com/photo-1544333346-64e4fe18274b?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={post.title} />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold p-2 text-center">{post.title}</div>
-                  </Link>
-                )) : <p className="col-span-2 text-gray-300 py-10 text-center">활동 소식이 없습니다.</p>}
+                {latestProjects.length > 0 ? latestProjects.map(post => {
+                  const thumb = post.imageUrl || (post.imageUrls && post.imageUrls[0]);
+                  return (
+                    <Link key={post.id} to={`/board/projects/view/${post.id}`} className="aspect-video bg-gray-100 rounded-2xl overflow-hidden relative group">
+                      <img src={thumb || 'https://images.unsplash.com/photo-1544333346-64e4fe18274b?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={post.title} />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold p-2 text-center">{post.title}</div>
+                    </Link>
+                  );
+                }) : <p className="col-span-2 text-gray-300 py-10 text-center">활동 소식이 없습니다.</p>}
               </div>
             </div>
           </div>
-
-          <div className="text-center mb-10 mt-20">
-            <h2 className="text-2xl font-bold text-gray-900">관련 기관 바로가기</h2>
-            <p className="text-gray-500 mt-2">꿈뜨레 지역공동체와 함께하는 주요 공공기관입니다.</p>
-          </div>
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {RELATED_SITES.map((site) => (
-              <a
-                key={site.url}
-                href={site.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all text-left"
-              >
+              <a key={site.url} href={site.url} target="_blank" rel="noopener noreferrer" className="group flex flex-col p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all text-left">
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-lg font-bold text-gray-900 group-hover:text-purple-700 transition-colors">{site.name}</span>
                   <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-500 transition-colors" />
@@ -394,17 +386,6 @@ const Home = () => {
               </a>
             ))}
           </div>
-
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-50 p-3 rounded-2xl text-blue-600"><Newspaper className="h-8 w-8" /></div>
-              <div><h3 className="text-xl font-bold text-gray-900">꿈뜨레 소식 (외부 포털)</h3><p className="text-sm text-gray-500">네이버와 다음에서 꿈뜨레의 언론 보도를 확인하세요.</p></div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <a href="https://search.naver.com/search.naver?where=news&query=%EA%BF%88%EB%9C%A8%EB%A0%88+%EC%A7%80%EC%97%AD%EA%B3%B5%EB%8F%99%EC%B2%B4" target="_blank" className="flex items-center bg-[#03C75A] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-95 transition-all"><Search className="mr-2 h-4 w-4" /> 네이버 뉴스</a>
-              <a href="https://search.daum.net/search?w=news&q=%EA%BF%88%EB%9C%A8%EB%A0%88+%EC%A7%80%EC%97%AD%EA%B3%B5%EB%8F%99%EC%B2%B4" target="_blank" className="flex items-center bg-[#FAE100] text-[#3C1E1E] px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-95 transition-all"><Search className="mr-2 h-4 w-4" /> 다음 뉴스</a>
-            </div>
-          </div>
         </div>
       </section>
     </div>
@@ -412,23 +393,71 @@ const Home = () => {
 };
 
 const Greetings = () => (
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto">
-    <div className="bg-purple-900 text-white px-8 py-12 text-center relative overflow-hidden">
-      <h2 className="text-3xl font-bold mb-2 relative z-10">대표인사말</h2>
-      <p className="text-purple-200 relative z-10 font-light italic">"함께 돌보고, 함께 살아가는 지역을 꿈꾸며"</p>
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-purple-900 text-white px-8 py-16 text-center relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M0 100 C 20 0 50 0 100 100 Z" fill="white" />
+        </svg>
+      </div>
+      <div className="relative z-10">
+        <span className="inline-block bg-yellow-400 text-purple-900 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4">Message from Representative</span>
+        <h2 className="text-3xl md:text-4xl font-black mb-3 leading-tight">대표 인사말</h2>
+        <p className="text-purple-200 font-light text-lg italic">"꿈을 심고 행복을 가꾸는 따뜻한 울타리가 되겠습니다."</p>
+      </div>
     </div>
-    <div className="p-8 md:p-16 bg-[#fcfbf9] text-gray-700 leading-relaxed text-lg">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <Quote className="h-12 w-12 text-yellow-500 opacity-20 mb-4" />
-        <p className="font-bold text-2xl text-purple-900">안녕하십니까? 꿈뜨레 지역공동체 대표 이한기입니다.</p>
-        <p>저희 공동체는 지역의 아이들이 안전하고 따뜻한 환경에서 자라나며, 주민들이 서로를 돌보는 건강한 마을을 만들고자 설립되었습니다.</p>
-        <p>현재 <span className="font-bold text-purple-800 underline decoration-yellow-400 underline-offset-4">창원시 다함께돌봄센터 7호점</span>을 운영하고 있으며, 오는 2026년부터는 3호점의 새로운 운영을 준비하며 더 넓은 책임감을 가지고 지역사회를 섬기고자 합니다.</p>
-        <p>꿈을 심고 행복을 가꾸는 '꿈뜨레'라는 이름처럼, 여러분과 함께 희망의 씨앗을 심어가겠습니다. 따뜻한 관심과 참여 부탁드립니다. 감사합니다.</p>
-        <div className="pt-12 border-t border-gray-100 flex flex-col items-end">
-          <p className="text-gray-400 mb-2">2025년 2월</p>
-          <div className="flex items-center space-x-4">
-            <span className="text-3xl font-bold text-gray-900 tracking-widest">대표 이 한 기</span>
-            <div className="w-14 h-14 border-2 border-red-200 rounded-full flex items-center justify-center text-red-500 font-serif text-sm -rotate-12">(인)</div>
+    <div className="p-8 md:p-16 lg:p-24 bg-[#fcfbf9]">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex flex-col gap-12">
+          <div className="relative">
+            <Quote className="h-16 w-16 text-yellow-500 mb-6 opacity-20 absolute -top-8 -left-8" />
+            <h3 className="text-2xl md:text-3xl font-black text-purple-900 leading-tight mb-8">
+              아이들이 웃고, 이웃이 소통하며,<br/>
+              마을 전체가 하나의 가족이 되는 세상을 꿈꿉니다.
+            </h3>
+            <div className="space-y-8 text-gray-700 leading-relaxed text-lg font-normal">
+              <p>안녕하십니까? 꿈뜨레 지역공동체 대표 <span className="font-bold text-gray-900">이한기</span>입니다.</p>
+              <p>꿈뜨레 지역공동체는 <strong>'꿈을 심는 뜰(Yard)'</strong>이라는 뜻을 품고 있습니다. 우리가 살고 있는 이 지역사회가 단순히 거주하는 공간을 넘어, 우리 아이들이 마음껏 꿈을 꾸고 그 꿈이 건강하게 자라날 수 있는 비옥한 토양이 되기를 바라는 마음으로 첫발을 내디뎠습니다.</p>
+              <p>현대 사회의 급격한 변화 속에서 우리는 많은 것을 얻었지만, 소중한 '이웃'과 '공동체'라는 가치를 잃어가고 있습니다. 특히 맞벌이 가구의 증가와 돌봄의 공백은 우리 아이들에게 정서적 외로움을, 부모님들에게는 막중한 부담을 안겨주고 있습니다. 꿈뜨레 지역공동체는 이러한 시대적 과제 앞에 <strong>'마을 돌봄'</strong>이라는 해답을 제시하고자 합니다.</p>
+              <div className="grid md:grid-cols-3 gap-6 my-12 pt-8 border-t border-purple-50">
+                <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-purple-50">
+                  <Heart className="h-8 w-8 text-purple-600 mx-auto mb-4" />
+                  <h4 className="font-bold text-gray-900 mb-2">따뜻한 공존</h4>
+                  <p className="text-sm text-gray-500">누구도 소외되지 않는 포용적인 마을</p>
+                </div>
+                <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-purple-50">
+                  <ShieldCheck className="h-8 w-8 text-purple-600 mx-auto mb-4" />
+                  <h4 className="font-bold text-gray-900 mb-2">안전한 성지</h4>
+                  <p className="text-sm text-gray-500">믿고 맡길 수 있는 돌봄 시스템</p>
+                </div>
+                <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-purple-50">
+                  <Users className="h-8 w-8 text-purple-600 mx-auto mb-4" />
+                  <h4 className="font-bold text-gray-900 mb-2">함께하는 성장</h4>
+                  <p className="text-sm text-gray-500">이웃과 이웃이 서로를 키우는 연대</p>
+                </div>
+              </div>
+              <p>현재 저희 공동체는 <span className="bg-yellow-100 px-1 font-bold text-purple-900">창원시 다함께돌봄센터 7호점</span>을 운영하며 아이들의 방과 후 일상을 책임지고 있습니다. 단순히 보호를 넘어, 다양한 체험 활동과 정서적 교감을 통해 아이들이 자존감을 회복하고 사회성을 기를 수 있도록 돕고 있습니다.</p>
+              <p>또한, 다가오는 <span className="text-purple-800 font-bold underline underline-offset-4 decoration-yellow-400">2026년에는 다함께돌봄센터 3호점</span> 운영을 새롭게 시작하게 되었습니다. 이는 그동안 꿈뜨레가 보여준 진정성에 대해 지역사회가 보내준 신뢰의 결과라 생각합니다. 우리는 이 신뢰에 보답하기 위해 더욱 세심하고 전문적인 돌봄 체계를 구축해 나갈 것입니다.</p>
+              <p>우리의 발걸음은 혼자서 갈 수 없습니다. 주민 여러분의 따뜻한 관심과 참여, 그리고 후원자분들의 소중한 나눔이 모일 때 비로소 '꿈뜨레'라는 정원은 꽃을 피울 수 있습니다. 여러분과 함께 걷고 싶습니다. 언제든 열려 있는 소통의 공간에서 여러분의 목소리를 듣겠습니다.</p>
+              <p className="text-xl font-bold text-purple-900 mt-12">감사합니다. 꿈뜨레 지역공동체는 오늘도 우리 마을의 행복한 내일을 위해 정성을 다하겠습니다.</p>
+            </div>
+            <div className="mt-20 pt-12 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-4 text-gray-500">
+                <Flower2 className="h-10 w-10 text-yellow-400 opacity-50" />
+                <p className="text-sm text-left">꿈뜨레 지역공동체는 <br/>창원시 비영리 민간단체 등록(제 1호) 기관입니다.</p>
+              </div>
+              <div className="flex flex-col items-end">
+                <p className="text-gray-500 text-lg mb-2 font-medium">2025년 2월</p>
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-400 text-sm font-bold uppercase tracking-widest">Representative</span>
+                  <span className="text-4xl font-black text-gray-900 tracking-tighter">이 한 기</span>
+                  <div className="relative w-16 h-16 flex items-center justify-center">
+                     <div className="absolute inset-0 border-2 border-red-500 rounded-full opacity-30 transform rotate-12"></div>
+                     <span className="text-red-600 font-serif font-bold text-xl -rotate-12">印</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -445,7 +474,7 @@ const History = () => {
     { year: '2017', desc: '마산세무서 비영리단체 등록 (01.12)' },
   ];
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="bg-purple-900 text-white px-8 py-12 text-center"><h2 className="text-3xl font-bold mb-2">단체 연혁</h2><p className="text-purple-200">꿈뜨레가 걸어온 소중한 발자취입니다.</p></div>
       <div className="p-8 md:p-16">
         <div className="relative border-l-4 border-yellow-100 pl-8 space-y-12 ml-4">
@@ -496,10 +525,6 @@ const AccountInfo = () => {
           {!isEditing && <div className="mt-10 flex justify-center"><button onClick={()=>{setEditForm(settings); setIsEditing(true);}} className="text-gray-300 hover:text-purple-400 text-xs flex items-center transition-colors"><Edit3 className="mr-1 h-3 w-3" /> 관리자: 정보 수정</button></div>}
         </div>
       </div>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Gift className="mr-2 h-5 w-5 text-yellow-500" /> 기부금 영수증</h4><p className="text-sm text-gray-500">지정기부금 단체로서 기부금 영수증 발행을 통해 연말정산 혜택을 받으실 수 있습니다.</p></div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Phone className="mr-2 h-5 w-5 text-blue-500" /> 후원문의</h4><p className="text-sm text-gray-500">문의: 055-232-5412</p></div>
-      </div>
     </div>
   );
 };
@@ -529,7 +554,7 @@ const BoardList = () => {
                   <td className="px-6 py-4 text-gray-400 text-sm">{posts.length - i}</td>
                   <td className="px-6 py-4 font-bold text-gray-800 flex items-center gap-2">
                     <Link to={`/board/${boardType}/view/${p.id}`} className="hover:text-purple-700">{p.title}</Link>
-                    {(p.imageUrls && p.imageUrls.length > 0) && <ImageIcon className="h-4 w-4 text-purple-300" />}
+                    {((p.imageUrls && p.imageUrls.length > 0) || p.imageUrl) && <ImageIcon className="h-4 w-4 text-purple-300" />}
                   </td>
                   <td className="px-6 py-4 text-gray-400 text-sm">{new Date(p.createdAt).toLocaleDateString()}</td>
                 </tr>
@@ -561,14 +586,16 @@ const PostWrite = () => {
         const data = await compressImage(files[i]);
         compressed.push(data);
       }
+      // 새로운 사진들을 기존 리스트 뒤에 추가
       setImages(prev => [...prev, ...compressed]);
       setIsCompressing(false);
+      // 같은 파일을 다시 선택할 수 있도록 input 초기화
       if (imageInputRef.current) imageInputRef.current.value = "";
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  const removeImage = (index: number) => { 
+    setImages(prev => prev.filter((_, i) => i !== index)); 
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -581,8 +608,9 @@ const PostWrite = () => {
       content, 
       author: '관리자', 
       createdAt: Date.now(), 
-      imageUrl: images.length > 0 ? images[0] : undefined,
-      imageUrls: images 
+      // 첫 번째 이미지를 썸네일로 사용, 전체 리스트는 imageUrls에 저장
+      imageUrl: images.length > 0 ? images[0] : undefined, 
+      imageUrls: images.length > 0 ? images : undefined 
     });
     if (success) navigate(`/board/${type}`);
   };
@@ -590,39 +618,57 @@ const PostWrite = () => {
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
       <div className="bg-purple-900 text-white px-8 py-10 font-bold text-2xl">게시글 작성</div>
-      <form onSubmit={handleSubmit} className="p-8 space-y-6">
-        <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="제목" className="w-full p-4 bg-gray-50 rounded-xl border-none text-xl font-bold focus:ring-2 focus:ring-purple-200 outline-none" required />
-        <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="내용을 입력해 주세요" rows={10} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-200 outline-none resize-none" required></textarea>
+      <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <div>
+          <label className="block text-sm font-bold text-gray-400 uppercase mb-2 ml-1">게시글 제목</label>
+          <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full p-4 bg-gray-50 rounded-2xl border-none text-xl font-bold focus:ring-2 focus:ring-purple-200 outline-none" required />
+        </div>
         
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <input type="file" ref={imageInputRef} onChange={handleImages} accept="image/*" multiple className="hidden" id="img-upload" />
-            <label htmlFor="img-upload" className="flex items-center px-6 py-3 bg-purple-700 text-white rounded-full font-bold cursor-pointer hover:bg-purple-800 shadow-md transition-all active:scale-95">
-              {isCompressing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Camera className="mr-2 h-5 w-5" />}
-              {isCompressing ? '처리 중...' : '사진 첨부 (여러 장 가능)'}
-            </label>
-            <span className="text-xs text-gray-400">첫 번째 사진이 대표 이미지가 됩니다.</span>
-          </div>
+        <div>
+          <label className="block text-sm font-bold text-gray-400 uppercase mb-2 ml-1">본문 내용</label>
+          <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="마을의 소중한 이야기를 들려주세요" rows={12} className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-purple-200 outline-none resize-none text-lg leading-relaxed" required></textarea>
+        </div>
 
-          {images.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 pt-2">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-bold text-gray-400 uppercase ml-1">사진 첨부 ({images.length}장)</label>
+            <div className="flex items-center gap-4">
+              <input type="file" ref={imageInputRef} onChange={handleImages} accept="image/*" multiple className="hidden" id="img-upload" />
+              <label htmlFor="img-upload" className="flex items-center px-6 py-3 bg-purple-700 text-white rounded-full font-bold cursor-pointer hover:bg-purple-800 shadow-md transition-all active:scale-95">
+                {isCompressing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Camera className="mr-2 h-5 w-5" />} 사진 추가하기
+              </label>
+            </div>
+          </div>
+          
+          {images.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
               {images.map((img, idx) => (
-                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 group">
+                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 bg-white group shadow-sm">
                   <img src={img} className="w-full h-full object-cover" alt="preview" />
-                  <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X className="h-3 w-3" />
+                  <button type="button" onClick={() => removeImage(idx)} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                    <X className="h-4 w-4" />
                   </button>
-                  {idx === 0 && <span className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-purple-900 text-[10px] font-bold text-center py-0.5">대표</span>}
+                  {idx === 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-purple-900 text-[10px] font-black py-1 text-center">대표</div>
+                  )}
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="py-12 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
+              <ImageIcon className="h-12 w-12 mb-2 opacity-20" />
+              <p className="text-sm">첨부된 사진이 없습니다. (여러 장 선택 가능)</p>
             </div>
           )}
         </div>
 
-        <div className="pt-8 border-t flex justify-end gap-2">
-          <button type="submit" disabled={isCompressing} className="bg-purple-700 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-purple-800 transition-all disabled:opacity-50">게시글 저장</button>
-          <button type="button" onClick={()=>navigate(-1)} className="bg-gray-100 text-gray-500 px-8 py-4 rounded-full">취소</button>
+        <div className="pt-8 border-t flex flex-col sm:flex-row justify-end gap-3">
+          <button type="button" onClick={()=>navigate(-1)} className="order-2 sm:order-1 px-8 py-4 bg-gray-100 text-gray-500 rounded-full font-bold hover:bg-gray-200 transition-all">취소</button>
+          <button type="submit" disabled={isCompressing} className="order-1 sm:order-2 bg-purple-700 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-purple-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            게시글 저장하기
+          </button>
         </div>
+        <p className="text-center text-[11px] text-gray-400">※ 사진은 자동으로 최적화되어 저장됩니다. 용량이 큰 사진은 로딩이 다소 걸릴 수 있습니다.</p>
       </form>
     </div>
   );
@@ -633,35 +679,57 @@ const PostView = () => {
   const navigate = useNavigate();
   const { posts, deletePost } = useBoardStore();
   const post = posts.find(p => p.id === id);
-
   if (!post) return <div className="p-20 text-center">글을 찾을 수 없습니다.</div>;
-
+  
+  // imageUrls 배열이 있으면 사용하고, 없으면 단일 imageUrl을 배열로 만들어 사용
   const displayImages = post.imageUrls || (post.imageUrl ? [post.imageUrl] : []);
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto">
-      <div className="bg-purple-900 text-white px-8 py-12">
-        <button onClick={()=>navigate(-1)} className="text-purple-300 text-sm mb-4 flex items-center hover:text-white transition-colors"><ChevronRight className="rotate-180 mr-1 h-4 w-4" /> 목록으로</button>
-        <h2 className="text-3xl font-bold mb-6">{post.title}</h2>
-        <div className="flex text-sm text-purple-200 gap-6 opacity-70"><div className="flex items-center"><User className="mr-2 h-4 w-4" /> {post.author}</div><div className="flex items-center"><Calendar className="mr-2 h-4 w-4" /> {new Date(post.createdAt).toLocaleString()}</div></div>
+      <div className="bg-purple-900 text-white px-8 py-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+           <Logo className="h-48 w-48 -mr-10 -mt-10" />
+        </div>
+        <div className="relative z-10">
+          <button onClick={()=>navigate(-1)} className="text-purple-300 text-sm mb-4 flex items-center hover:text-white transition-colors"><ChevronRight className="rotate-180 mr-1 h-4 w-4" /> 목록으로 돌아가기</button>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 leading-tight break-all">{post.title}</h2>
+          <div className="flex flex-wrap text-sm text-purple-200 gap-6 opacity-80">
+            <div className="flex items-center"><User className="mr-2 h-4 w-4" /> {post.author}</div>
+            <div className="flex items-center"><Calendar className="mr-2 h-4 w-4" /> {new Date(post.createdAt).toLocaleString()}</div>
+          </div>
+        </div>
       </div>
+      
       <div className="p-8 md:p-16">
-        <div className="prose max-w-none text-gray-800 leading-relaxed text-lg whitespace-pre-wrap mb-12">{post.content}</div>
-        
+        <div className="prose max-w-none text-gray-800 leading-relaxed text-lg whitespace-pre-wrap mb-16 min-h-[150px]">
+          {post.content}
+        </div>
+
         {displayImages.length > 0 && (
-          <div className="space-y-8 mb-12 border-t pt-12">
-            <h3 className="text-xl font-bold flex items-center text-purple-900"><ImageIcon className="mr-2 h-6 w-6" /> 관련 사진</h3>
-            <div className="grid gap-8">
+          <div className="space-y-10 mb-16 border-t pt-16">
+            <div className="flex items-center justify-between mb-8">
+               <h3 className="text-2xl font-black flex items-center text-purple-900"><ImageIcon className="mr-3 h-7 w-7" /> 활동 갤러리</h3>
+               <span className="text-sm font-bold text-gray-400">{displayImages.length}장의 사진</span>
+            </div>
+            <div className="grid gap-12">
               {displayImages.map((img, idx) => (
-                <div key={idx} className="rounded-2xl overflow-hidden border bg-gray-50 shadow-sm">
-                  <img src={img} className="w-full h-auto max-h-[1000px] object-contain mx-auto" alt={`content-${idx}`} />
+                <div key={idx} className="group relative rounded-3xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm hover:shadow-md transition-shadow">
+                  <img src={img} className="w-full h-auto max-h-[1200px] object-contain mx-auto" alt={`활동 사진 ${idx + 1}`} />
+                  <div className="absolute bottom-4 right-6 bg-black/30 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    Activity Photo {idx + 1}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="flex justify-between border-t pt-8"><button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200 font-bold">목록</button><button onClick={()=>{if(confirm('삭제하시겠습니까?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm font-bold"><Trash2 className="mr-2 h-4 w-4" /> 삭제</button></div>
+        <div className="flex justify-between items-center border-t pt-10">
+          <button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200 font-bold transition-all">목록</button>
+          <button onClick={()=>{if(confirm('이 게시글을 삭제하시겠습니까?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm font-bold transition-colors">
+            <Trash2 className="mr-2 h-5 w-5" /> 게시글 삭제
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -692,5 +760,8 @@ const App = () => (
   </Router>
 );
 
-const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<React.StrictMode><App /></React.StrictMode>);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(<App />);
+}

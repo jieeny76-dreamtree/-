@@ -98,7 +98,7 @@ const Greetings: React.FC = () => {
               <div className="mt-20 pt-12 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-8">
                 <div className="flex items-center gap-4 text-gray-500">
                   <Flower2 className="h-10 w-10 text-yellow-400 opacity-50" />
-                  <p className="text-sm">꿈뜨레 지역공동체는 <br/>경상남도 비영리민간단체 등록(제1261호) 기관입니다.</p>
+                  <p className="text-sm">꿈뜨레 지역공동체는 <br/>창원시 비영리 민간단체 등록(제 1호) 기관입니다.</p>
                 </div>
                 <div className="flex flex-col items-end">
                   <p className="text-gray-500 text-lg mb-2 font-medium">2025년 2월의 어느 날</p>

@@ -4,8 +4,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- 기본 검색 엔진 최적화 (SEO) -->
     <title>꿈뜨레 지역공동체 - 함께 돌보고 함께 살아가는 마을</title>
-    <meta name="description" content="창원시 마산 내서읍 비영리민간단체 꿈뜨레 지역공동체 공식 홈페이지입니다. 다함께돌봄센터 운영 및 지역사회 공익활동 소식을 전합니다.">
+    <meta name="description" content="꿈을 심고 행복을 가꾸는 마을, 꿈뜨레 지역공동체(Kkumttre Community) 비영리민간단체 공식 웹사이트입니다. 창원시 다함께돌봄센터 운영 및 지역 공동체 활동 소식을 전합니다.">
+    <meta name="keywords" content="꿈뜨레, 꿈뜨레 지역공동체, 비영리민간단체, 창원시 다함께돌봄센터, 마산 내서읍 돌봄, 지역 공동체, 이한기 대표, 창원 비영리단체, 아동돌봄">
+    <meta name="author" content="꿈뜨레 지역공동체">
+    <link rel="canonical" href="https://kkumttre.github.io/">
+
+    <!-- 오픈 그래프 (SNS 공유 최적화: 네이버, 카카오톡 등) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="꿈뜨레 지역공동체">
+    <meta property="og:description" content="아이들이 안전하고 이웃이 서로를 살피는 따뜻한 마을, 꿈뜨레 지역공동체입니다.">
+    <meta property="og:image" content="https://kkumttre.github.io/logo_preview.png"> <!-- 실제 로고 이미지 경로로 대체 필요 -->
+    <meta property="og:url" content="https://kkumttre.github.io/">
+    <meta property="og:site_name" content="꿈뜨레 지역공동체">
+
+    <!-- 트위터 카드 -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="꿈뜨레 지역공동체">
+    <meta name="twitter:description" content="함께 돌보고 함께 살아가는 마을, 꿈뜨레 지역공동체 공식 홈페이지">
+    <meta name="twitter:image" content="https://kkumttre.github.io/logo_preview.png">
+
+    <!-- 구조화 데이터 (JSON-LD) - 검색 엔진이 조직 정보를 인식하도록 함 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "꿈뜨레 지역공동체",
+      "alternateName": "Kkumttre Community",
+      "url": "https://kkumttre.github.io/",
+      "logo": "https://kkumttre.github.io/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+82-55-232-5412",
+        "contactType": "customer service",
+        "areaServed": "KR",
+        "availableLanguage": "Korean"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "내서읍 삼계6길 40 202호",
+        "addressLocality": "창원시 마산회원구",
+        "addressRegion": "경상남도",
+        "postalCode": "51234",
+        "addressCountry": "KR"
+      },
+      "description": "지역 주민과 함께 따뜻한 나눔의 문화를 만들고, 아이들이 행복하게 자랄 수 있는 돌봄 환경을 조성하는 비영리민간단체입니다."
+    }
+    </script>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -19,18 +66,18 @@
     </style>
 
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3",
-    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.475.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react-dom": "https://esm.sh/react-dom@^19.2.3",
+        "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+        "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
+        "lucide-react": "https://esm.sh/lucide-react@^0.475.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "react/": "https://esm.sh/react@^19.2.4/"
+      }
+    }
+    </script>
 </head>
 <body class="bg-gray-50 text-gray-900 overflow-x-hidden">
     <div id="root"></div>
