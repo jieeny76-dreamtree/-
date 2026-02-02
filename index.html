@@ -4,85 +4,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>꿈뜨레 지역공동체 - 함께 돌보고 함께 살아가는 마을</title>
+    <meta name="description" content="창원시 마산 내서읍 위치. 비영리민간단체 꿈뜨레 지역공동체 공식 홈페이지입니다. 다함께돌봄센터 운영 및 지역사회 공익활동 소식을 전합니다.">
     
-    <!-- 기본 검색 엔진 최적화 (SEO) -->
-    <title>꿈뜨레 지역공동체 - 꿈을 심고 행복을 가꾸는 마을</title>
-    <meta name="description" content="창원시 마산 내서읍 위치. 비영리민간단체 꿈뜨레 지역공동체입니다. 다함께돌봄센터 운영, 양성평등사업, 지역 공익활동을 통해 아이들이 행복하고 이웃이 따뜻한 마을을 만듭니다.">
-    <meta name="keywords" content="꿈뜨레, 꿈뜨레 지역공동체, 창원시 다함께돌봄센터, 마산 돌봄센터, 내서 돌봄, 비영리민간단체, 지역공동체, 이한기, 마을돌봄">
-    <meta name="author" content="꿈뜨레 지역공동체">
-    <meta name="robots" content="index,follow">
-    <link rel="canonical" href="https://kkumttre.github.io/">
-
-    <!-- 포털 사이트 소유권 확인 메타 태그 (인증키 발급 후 수정 가능) -->
-    <meta name="naver-site-verification" content="naver_verification_key" />
-    <meta name="google-site-verification" content="google_verification_key" />
-
-    <!-- Open Graph (SNS 공유 최적화) -->
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="꿈뜨레 지역공동체">
-    <meta property="og:title" content="꿈뜨레 지역공동체 - 함께 돌보고 함께 살아가는 마을">
-    <meta property="og:description" content="꿈을 심고 행복을 가꾸는 마을 공동체. 다함께돌봄센터 및 지역 공익활동 소식을 전합니다.">
-    <meta property="og:image" content="https://kkumttre.github.io/logo.png">
-    <meta property="og:url" content="https://kkumttre.github.io/">
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="꿈뜨레 지역공동체">
-    <meta name="twitter:description" content="함께 돌보고 행복을 가꾸는 지역 사회 공동체">
-
+    <!-- Tailwind CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     
-    <!-- 구조화 데이터 (JSON-LD) -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "NGO",
-      "name": "꿈뜨레 지역공동체",
-      "alternateName": "Kkumttre Community",
-      "description": "경상남도 창원시 마산회원구 비영리 민간단체. 다함께돌봄센터 운영 및 지역사회 공익사업 수행",
-      "url": "https://kkumttre.github.io/",
-      "logo": "https://kkumttre.github.io/logo.png",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "삼계6길 40 202호",
-        "addressLocality": "창원시 마산회원구 내서읍",
-        "addressRegion": "경상남도",
-        "addressCountry": "KR"
-      },
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+82-55-232-5412",
-        "contactType": "customer service",
-        "email": "zaminan@naver.com"
-      }
-    }
-    </script>
-
     <style>
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            margin: 0;
-            padding: 0;
-            -webkit-font-smoothing: antialiased;
-        }
-        /* 로딩 애니메이션 및 부드러운 전환 */
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        body { font-family: 'Noto Sans KR', sans-serif; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f9fafb; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
     </style>
-<script type="importmap">
+
+    <script type="importmap">
 {
   "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
     "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3"
+    "lucide-react": "https://esm.sh/lucide-react@^0.475.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-gray-50 text-gray-900 overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

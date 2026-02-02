@@ -16,10 +16,10 @@ import {
   ExternalLink, Search, Newspaper, Menu, X, ChevronDown, 
   Phone, Mail, Instagram, Facebook, Globe, Plus, FileText, 
   Download, Trash2, Calendar, User, Save, Paperclip, ClipboardCheck,
-  Gift, Receipt, Settings, Edit3
+  Gift, Receipt, Settings, Edit3, Quote
 } from 'lucide-react';
 
-// --- Types ---
+// --- Types & Constants ---
 type BoardType = 'projects' | 'notices' | 'donations';
 
 interface Post {
@@ -41,7 +41,6 @@ interface SiteSettings {
   accountHolder: string;
 }
 
-// --- Constants ---
 const NAVIGATION = [
   {
     name: '단체소개',
@@ -69,8 +68,8 @@ const RELATED_SITES = [
   { name: '창원시청', url: 'https://www.changwon.go.kr', description: '변화의 시작, 창원특례시' },
 ];
 
-const STORAGE_KEY = 'kkumttre_posts';
-const SETTINGS_KEY = 'kkumttre_settings';
+const STORAGE_KEY = 'kkumttre_posts_v1';
+const SETTINGS_KEY = 'kkumttre_settings_v1';
 
 const DEFAULT_SETTINGS: SiteSettings = {
   bankName: '농협은행',
@@ -78,7 +77,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   accountHolder: '꿈뜨레 지역공동체',
 };
 
-// --- Stores (Hooks) ---
+// --- Custom Hooks (Stores) ---
 const useBoardStore = () => {
   const [posts, setPosts] = useState<Post[]>([]);
 
@@ -125,7 +124,7 @@ const useSettingsStore = () => {
   return { settings, updateSettings };
 };
 
-// --- Components ---
+// --- Shared Components ---
 const Logo: React.FC<{ className?: string }> = ({ className = "h-12 w-12" }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M10 45 L50 10 L90 45 V90 H10 Z" stroke="#FBBF24" strokeWidth="6" strokeLinejoin="round" />
@@ -179,23 +178,65 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-      {/* Mobile Menu Simplified */}
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 bg-white z-[60] p-6">
-          <div className="flex justify-between mb-8"><Logo /><button onClick={() => setIsOpen(false)}><X className="h-8 w-8" /></button></div>
-          <div className="space-y-6">
-            {NAVIGATION.map(item => (
-              <div key={item.path}>
-                <div className="font-bold text-purple-900 mb-2">{item.name}</div>
-                {item.subItems?.map(sub => (
-                  <Link key={sub.path} to={sub.path} onClick={() => setIsOpen(false)} className="block pl-4 py-2 text-gray-600">{sub.name}</Link>
-                ))}
+      {/* Mobile Menu */}
+      <div className={`fixed inset-0 bg-white z-[100] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-6 h-full flex flex-col">
+          <div className="flex justify-between items-center mb-10">
+            <Logo className="h-10 w-10" />
+            <button onClick={() => setIsOpen(false)} className="p-2 text-gray-400"><X className="h-8 w-8" /></button>
+          </div>
+          <div className="space-y-6 overflow-y-auto">
+            {NAVIGATION.map((item) => (
+              <div key={item.path} className="border-b border-gray-50 pb-6">
+                <div className="text-xl font-black text-purple-900 mb-4">{item.name}</div>
+                <div className="grid grid-cols-1 gap-4 pl-4">
+                  {item.subItems ? (
+                    item.subItems.map((sub) => (
+                      <Link key={sub.path} to={sub.path} onClick={() => setIsOpen(false)} className="text-lg text-gray-600 font-medium active:text-purple-600">{sub.name}</Link>
+                    ))
+                  ) : (
+                    <Link to={item.path} onClick={() => setIsOpen(false)} className="text-lg text-gray-600 font-medium">바로가기</Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+          <div className="mt-auto py-8">
+            <Link to="/donation/account" onClick={() => setIsOpen(false)} className="block w-full text-center bg-yellow-400 text-purple-900 font-black py-4 rounded-2xl text-lg shadow-lg">후원 참여하기</Link>
+          </div>
         </div>
-      )}
+      </div>
     </nav>
+  );
+};
+
+const Breadcrumb = () => {
+  const location = useLocation();
+  const path = location.pathname;
+  if (path === '/' || path === '') return null;
+  let category = "";
+  let pageName = "";
+  if (path.includes('/intro/')) {
+    category = "단체소개";
+    pageName = path.includes('greetings') ? "대표인사말" : "연혁";
+  } else if (path.includes('/board/')) {
+    if (path.includes('projects')) category = "주요사업";
+    else if (path.includes('notices')) category = "공지사항";
+    else if (path.includes('donations')) category = "후원소식";
+    pageName = path.includes('write') ? "글쓰기" : path.includes('view') ? "상세보기" : "목록";
+  } else if (path.includes('/donation/')) {
+    category = "후원안내";
+    pageName = "계좌안내";
+  }
+  return (
+    <div className="bg-white border-b border-gray-100 mb-8 py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center text-sm text-gray-500">
+        <Link to="/" className="hover:text-purple-600">홈</Link>
+        <span className="mx-2">/</span>
+        {category && <><span className="text-gray-400">{category}</span><span className="mx-2">/</span></>}
+        <span className="font-bold text-purple-700">{pageName}</span>
+      </div>
+    </div>
   );
 };
 
@@ -208,10 +249,10 @@ const Footer = () => (
             <Logo className="h-10 w-10 grayscale brightness-200" />
             <span className="text-2xl font-black text-white tracking-tighter">꿈뜨레 지역공동체</span>
           </div>
-          <p className="text-sm leading-relaxed mb-8 max-w-sm">아이들이 행복하게 자랄 수 있는 돌봄 환경을 조성하는 비영리민간단체입니다.</p>
+          <p className="text-sm leading-relaxed mb-8 max-w-sm">아이들이 행복하게 자라고 이웃이 서로를 살피는 따뜻한 마을을 만드는 비영리민간단체입니다.</p>
           <div className="flex space-x-4">
-            <a href="#" className="h-10 w-10 bg-white/5 rounded-full flex items-center justify-center text-white"><Instagram className="h-5 w-5" /></a>
-            <a href="#" className="h-10 w-10 bg-white/5 rounded-full flex items-center justify-center text-white"><Facebook className="h-5 w-5" /></a>
+            <a href="#" className="h-10 w-10 bg-white/5 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-colors"><Instagram className="h-5 w-5" /></a>
+            <a href="#" className="h-10 w-10 bg-white/5 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-colors"><Facebook className="h-5 w-5" /></a>
           </div>
         </div>
         <div className="md:col-span-4">
@@ -253,17 +294,17 @@ const Home = () => {
 
   return (
     <div className="flex flex-col">
-      <section className="relative bg-gradient-to-br from-purple-900 to-indigo-900 text-white py-24 overflow-hidden text-center">
-        <div className="absolute inset-0 opacity-10">
+      <section className="relative bg-gradient-to-br from-purple-900 to-indigo-900 text-white py-24 md:py-32 overflow-hidden text-center">
+        <div className="absolute inset-0 opacity-15">
           <img src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=1600" className="w-full h-full object-cover" alt="bg" />
         </div>
         <div className="relative max-w-4xl mx-auto px-4">
-          <div className="inline-block bg-white/10 backdrop-blur-md p-4 rounded-full mb-8 border border-white/20"><Logo className="h-16 w-16" /></div>
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-6">꿈을 심고 행복을 가꾸는<br/><span className="text-yellow-400">꿈뜨레 지역공동체</span></h1>
-          <p className="text-xl text-purple-100 mb-10">아이들이 안전하고 이웃이 서로를 살피는 따뜻한 마을을 만듭니다.</p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/intro/greetings" className="bg-yellow-500 text-purple-900 px-8 py-4 rounded-full font-bold shadow-xl hover:scale-105 transition-transform">인사말 보기</Link>
-            <Link to="/board/notices" className="bg-white/10 backdrop-blur-md border border-white/30 px-8 py-4 rounded-full font-bold">공지사항 확인</Link>
+          <div className="inline-block bg-white/10 backdrop-blur-md p-4 rounded-full mb-8 border border-white/20 animate-bounce"><Logo className="h-16 w-16" /></div>
+          <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tighter">꿈을 심고 행복을 가꾸는<br/><span className="text-yellow-400">꿈뜨레 지역공동체</span></h1>
+          <p className="text-xl md:text-2xl text-purple-100 mb-12 font-light">아이들이 안전하고 이웃이 서로를 살피는 따뜻한 마을을 만듭니다.</p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link to="/intro/greetings" className="bg-yellow-500 text-purple-900 px-10 py-5 rounded-full font-bold text-xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center">인사말 보기 <ArrowRight className="ml-2 h-6 w-6" /></Link>
+            <Link to="/board/notices" className="bg-white/10 backdrop-blur-md border border-white/30 px-10 py-5 rounded-full font-bold text-xl hover:bg-white/20 transition-colors">공지사항 확인</Link>
           </div>
         </div>
       </section>
@@ -272,30 +313,31 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 mb-12">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold flex items-center"><Bell className="mr-2 text-purple-600" /> 공지사항</h2>
-                <Link to="/board/notices" className="text-sm text-gray-400">더보기 +</Link>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold flex items-center"><Bell className="mr-2 text-purple-600 h-6 w-6" /> 공지사항</h2>
+                <Link to="/board/notices" className="text-sm text-gray-400 hover:text-purple-600">더보기 +</Link>
               </div>
               <div className="space-y-4">
-                {latestNotices.map(post => (
-                  <Link key={post.id} to={`/board/notices/view/${post.id}`} className="flex justify-between p-3 hover:bg-purple-50 rounded-xl transition-colors">
-                    <span className="truncate pr-4 font-medium">{post.title}</span>
+                {latestNotices.length > 0 ? latestNotices.map(post => (
+                  <Link key={post.id} to={`/board/notices/view/${post.id}`} className="flex justify-between p-4 hover:bg-purple-50 rounded-2xl transition-all group">
+                    <span className="truncate pr-4 font-medium group-hover:text-purple-800">{post.title}</span>
                     <span className="text-xs text-gray-400 shrink-0">{new Date(post.createdAt).toLocaleDateString()}</span>
                   </Link>
-                ))}
+                )) : <p className="text-gray-300 py-10 text-center">등록된 공지가 없습니다.</p>}
               </div>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold flex items-center"><Camera className="mr-2 text-yellow-600" /> 활동 갤러리</h2>
-                <Link to="/board/projects" className="text-sm text-gray-400">더보기 +</Link>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold flex items-center"><Camera className="mr-2 text-yellow-600 h-6 w-6" /> 활동 갤러리</h2>
+                <Link to="/board/projects" className="text-sm text-gray-400 hover:text-purple-600">더보기 +</Link>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {latestProjects.map(post => (
-                  <Link key={post.id} to={`/board/projects/view/${post.id}`} className="aspect-video bg-gray-100 rounded-xl overflow-hidden relative group">
-                    <img src={post.imageUrl || 'https://images.unsplash.com/photo-1544333346-64e4fe18274b?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                {latestProjects.length > 0 ? latestProjects.map(post => (
+                  <Link key={post.id} to={`/board/projects/view/${post.id}`} className="aspect-video bg-gray-100 rounded-2xl overflow-hidden relative group">
+                    <img src={post.imageUrl || 'https://images.unsplash.com/photo-1544333346-64e4fe18274b?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={post.title} />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold p-2 text-center">{post.title}</div>
                   </Link>
-                ))}
+                )) : <p className="col-span-2 text-gray-300 py-10 text-center">활동 소식이 없습니다.</p>}
               </div>
             </div>
           </div>
@@ -303,11 +345,11 @@ const Home = () => {
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="bg-blue-50 p-3 rounded-2xl text-blue-600"><Newspaper className="h-8 w-8" /></div>
-              <div><h3 className="text-xl font-bold">언론 속의 꿈뜨레</h3><p className="text-sm text-gray-500">포털 사이트에서 보도된 소식을 확인하세요.</p></div>
+              <div><h3 className="text-xl font-bold text-gray-900">꿈뜨레 소식 (외부 포털)</h3><p className="text-sm text-gray-500">네이버와 다음에서 꿈뜨레의 언론 보도를 확인하세요.</p></div>
             </div>
-            <div className="flex gap-3">
-              <a href="https://search.naver.com/search.naver?where=news&query=%EA%BF%88%EB%9C%A8%EB%A0%88+%EC%A7%80%EC%97%AD%EA%B3%B5%EB%8F%99%EC%B2%B4" target="_blank" className="bg-[#03C75A] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-95">네이버 뉴스</a>
-              <a href="https://search.daum.net/search?w=news&q=%EA%BF%88%EB%9C%A8%EB%A0%88+%EC%A7%80%EC%97%AD%EA%B3%B5%EB%8F%99%EC%B2%B4" target="_blank" className="bg-[#FAE100] text-[#3C1E1E] px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-95">다음 뉴스</a>
+            <div className="flex flex-wrap gap-3">
+              <a href="https://search.naver.com/search.naver?where=news&query=%EA%BF%88%EB%9C%A8%EB%A0%88+%EC%A7%80%EC%97%AD%EA%B3%B5%EB%8F%99%EC%B2%B4" target="_blank" className="flex items-center bg-[#03C75A] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-95 transition-all"><Search className="mr-2 h-4 w-4" /> 네이버 뉴스</a>
+              <a href="https://search.daum.net/search?w=news&q=%EA%BF%88%EB%9C%A8%EB%A0%88+%EC%A7%80%EC%97%AD%EA%B3%B5%EB%8F%99%EC%B2%B4" target="_blank" className="flex items-center bg-[#FAE100] text-[#3C1E1E] px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-95 transition-all"><Search className="mr-2 h-4 w-4" /> 다음 뉴스</a>
             </div>
           </div>
         </div>
@@ -316,41 +358,228 @@ const Home = () => {
   );
 };
 
-// --- App Layout & Router ---
-// Fix: Added optional modifier to children prop to resolve TypeScript error where the compiler incorrectly flags it as missing in nested JSX expressions.
-const PageLayout = ({ children, title }: { children?: React.ReactNode, title?: string }) => (
-  <div className="max-w-7xl mx-auto px-4 py-12">
-    <div className="mb-8 flex items-center text-sm text-gray-400">
-      <Link to="/" className="hover:text-purple-600">홈</Link>
-      <span className="mx-2">/</span>
-      <span className="font-bold text-purple-700">{title || '페이지'}</span>
+const Greetings = () => (
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto">
+    <div className="bg-purple-900 text-white px-8 py-12 text-center relative overflow-hidden">
+      <h2 className="text-3xl font-bold mb-2 relative z-10">대표인사말</h2>
+      <p className="text-purple-200 relative z-10 font-light italic">"함께 돌보고, 함께 살아가는 지역을 꿈꾸며"</p>
     </div>
-    {children}
+    <div className="p-8 md:p-16 bg-[#fcfbf9] text-gray-700 leading-relaxed text-lg">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <Quote className="h-12 w-12 text-yellow-500 opacity-20 mb-4" />
+        <p className="font-bold text-2xl text-purple-900">안녕하십니까? 꿈뜨레 지역공동체 대표 이한기입니다.</p>
+        <p>저희 공동체는 지역의 아이들이 안전하고 따뜻한 환경에서 자라나며, 주민들이 서로를 돌보는 건강한 마을을 만들고자 설립되었습니다.</p>
+        <p>현재 <span className="font-bold text-purple-800 underline decoration-yellow-400 underline-offset-4">창원시 다함께돌봄센터 7호점</span>을 운영하고 있으며, 오는 2026년부터는 3호점의 새로운 운영을 준비하며 더 넓은 책임감을 가지고 지역사회를 섬기고자 합니다.</p>
+        <p>꿈을 심고 행복을 가꾸는 '꿈뜨레'라는 이름처럼, 여러분과 함께 희망의 씨앗을 심어가겠습니다. 따뜻한 관심과 참여 부탁드립니다. 감사합니다.</p>
+        <div className="pt-12 border-t border-gray-100 flex flex-col items-end">
+          <p className="text-gray-400 mb-2">2025년 2월</p>
+          <div className="flex items-center space-x-4">
+            <span className="text-3xl font-bold text-gray-900 tracking-widest">대표 이 한 기</span>
+            <div className="w-14 h-14 border-2 border-red-200 rounded-full flex items-center justify-center text-red-500 font-serif text-sm -rotate-12">(인)</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 );
 
-const App = () => {
+const History = () => {
+  const events = [
+    { year: '2026', desc: '창원시 다함께돌봄센터 3호점 위탁운영 개시 예정' },
+    { year: '2025', desc: '창원시 비영리민간단체 공익활동 지원사업 선정' },
+    { year: '2024', desc: '창원시 다함께돌봄센터 7호점 위탁운영 개시' },
+    { year: '2023', desc: '비영리민간단체 변경등록 (꿈뜨레 지역공동체)' },
+    { year: '2021', desc: '우리마을 아이돌봄센터 운영' },
+    { year: '2019', desc: '양성평등사업 지원단체 선정' },
+    { year: '2017', desc: '마산세무서 비영리단체 등록 (01.12)' },
+  ];
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <main className="flex-grow">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
+      <div className="bg-purple-900 text-white px-8 py-12 text-center"><h2 className="text-3xl font-bold mb-2">단체 연혁</h2><p className="text-purple-200">꿈뜨레가 걸어온 소중한 발자취입니다.</p></div>
+      <div className="p-8 md:p-16">
+        <div className="relative border-l-4 border-yellow-100 pl-8 space-y-12 ml-4">
+          {events.map((e, i) => (
+            <div key={i} className="relative group">
+              <div className="absolute -left-[42px] top-1 w-5 h-5 bg-white border-4 border-yellow-400 rounded-full group-hover:scale-125 transition-transform"></div>
+              <h4 className="text-2xl font-black text-purple-700 mb-1">{e.year}</h4>
+              <p className="text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100 group-hover:border-purple-200 transition-all">{e.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AccountInfo = () => {
+  const { settings, updateSettings } = useSettingsStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState(settings);
+  const handleCopy = () => { navigator.clipboard.writeText(settings.accountNumber); alert('계좌번호가 복사되었습니다.'); };
+  const handleSave = () => { updateSettings(editForm); setIsEditing(false); alert('정보가 변경되었습니다.'); };
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div className="bg-purple-900 text-white px-8 py-16 text-center relative">
+          <Heart className="h-20 w-20 text-white/10 absolute top-4 right-4" />
+          <h2 className="text-3xl font-bold mb-4">후원 계좌 안내</h2>
+          <p className="text-purple-200 font-light">보내주신 후원금은 투명하고 공정하게 사용됩니다.</p>
+        </div>
+        <div className="p-10">
+          {!isEditing ? (
+            <div className="bg-gradient-to-br from-purple-50 to-white p-10 rounded-[2rem] border border-purple-100 text-center">
+              <p className="text-purple-600 font-bold mb-4 uppercase tracking-widest text-sm">{settings.bankName}</p>
+              <p className="text-3xl md:text-4xl font-mono font-bold text-purple-900 mb-6 tracking-tighter">{settings.accountNumber}</p>
+              <p className="text-gray-500 mb-8 font-medium">예금주: <span className="text-gray-900 font-bold">{settings.accountHolder}</span></p>
+              <button onClick={handleCopy} className="bg-purple-700 text-white px-8 py-4 rounded-full font-bold shadow-lg hover:bg-purple-800 flex items-center mx-auto transition-all"><ClipboardCheck className="mr-2 h-5 w-5" /> 계좌번호 복사하기</button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <input type="text" value={editForm.bankName} onChange={e=>setEditForm({...editForm, bankName: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="은행명" />
+              <input type="text" value={editForm.accountNumber} onChange={e=>setEditForm({...editForm, accountNumber: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="계좌번호" />
+              <input type="text" value={editForm.accountHolder} onChange={e=>setEditForm({...editForm, accountHolder: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="예금주" />
+              <div className="flex gap-2 pt-4"><button onClick={handleSave} className="flex-1 bg-purple-700 text-white py-4 rounded-xl font-bold">저장</button><button onClick={()=>setIsEditing(false)} className="px-8 bg-gray-100 text-gray-500 py-4 rounded-xl">취소</button></div>
+            </div>
+          )}
+          {!isEditing && <div className="mt-10 flex justify-center"><button onClick={()=>{setEditForm(settings); setIsEditing(true);}} className="text-gray-300 hover:text-purple-400 text-xs flex items-center transition-colors"><Edit3 className="mr-1 h-3 w-3" /> 관리자: 정보 수정</button></div>}
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Gift className="mr-2 h-5 w-5 text-yellow-500" /> 기부금 영수증</h4><p className="text-sm text-gray-500">꿈뜨레는 지정기부금 단체로, 기부금 영수증 발행을 통해 연말정산 혜택을 받으실 수 있습니다.</p></div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Phone className="mr-2 h-5 w-5 text-blue-500" /> 후원문의</h4><p className="text-sm text-gray-500">정기후원 및 일시후원 관련 문의는 055-232-5412로 연락 부탁드립니다.</p></div>
+      </div>
+    </div>
+  );
+};
+
+const BoardList = () => {
+  const { type } = useParams<{ type: string }>();
+  const boardType = type as BoardType;
+  const { getPostsByType } = useBoardStore();
+  const posts = getPostsByType(boardType);
+  const titles = { projects: '주요사업', notices: '공지사항', donations: '후원소식' };
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
+      <div className="bg-purple-900 text-white px-8 py-10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div><h2 className="text-3xl font-bold">{titles[boardType] || '게시판'}</h2><p className="text-purple-200 text-sm mt-1">꿈뜨레의 소식을 전해드립니다.</p></div>
+        <Link to={`/board/${boardType}/write`} className="bg-yellow-500 hover:bg-yellow-400 text-purple-900 px-6 py-3 rounded-full font-bold shadow-md flex items-center"><Plus className="mr-2 h-5 w-5" /> 글쓰기</Link>
+      </div>
+      <div className="p-8">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 text-gray-400 text-xs uppercase tracking-widest"><tr className="border-b">
+              <th className="px-6 py-4">번호</th><th className="px-6 py-4">제목</th><th className="px-6 py-4">작성자</th><th className="px-6 py-4">날짜</th>
+            </tr></thead>
+            <tbody className="divide-y divide-gray-50">
+              {posts.length > 0 ? posts.map((p, i) => (
+                <tr key={p.id} className="hover:bg-purple-50 transition-colors">
+                  <td className="px-6 py-4 text-gray-400 text-sm">{posts.length - i}</td>
+                  <td className="px-6 py-4 font-bold text-gray-800"><Link to={`/board/${boardType}/view/${p.id}`} className="hover:text-purple-700 flex items-center">{p.title} {p.imageUrl && <Camera className="ml-2 h-3 w-3 text-purple-300" />}</Link></td>
+                  <td className="px-6 py-4 text-gray-500 text-sm">{p.author}</td>
+                  <td className="px-6 py-4 text-gray-400 text-sm">{new Date(p.createdAt).toLocaleDateString()}</td>
+                </tr>
+              )) : <tr><td colSpan={4} className="px-6 py-20 text-center text-gray-300 font-light">등록된 글이 없습니다.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PostWrite = () => {
+  const { type } = useParams<{ type: string }>();
+  const navigate = useNavigate();
+  const { addPost } = useBoardStore();
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [img, setImg] = useState<string>('');
+
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => setImg(e.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !content) return alert('모두 입력해주세요.');
+    addPost({ id: Date.now().toString(), type: type as BoardType, title, content, author: '관리자', createdAt: Date.now(), imageUrl: img });
+    navigate(`/board/${type}`);
+  };
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
+      <div className="bg-purple-900 text-white px-8 py-10 font-bold text-2xl">게시글 작성</div>
+      <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full p-4 bg-gray-50 rounded-xl border-none text-xl font-bold focus:ring-2 focus:ring-purple-200 outline-none" required />
+        <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="내용을 입력하세요" rows={12} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-200 outline-none resize-none" required></textarea>
+        <div className="flex items-center gap-4">
+          <input type="file" onChange={handleImage} accept="image/*" className="hidden" id="img-upload" />
+          <label htmlFor="img-upload" className="flex items-center px-6 py-3 bg-purple-50 text-purple-700 rounded-full font-bold cursor-pointer hover:bg-purple-100"><Camera className="mr-2 h-5 w-5" /> 사진 첨부</label>
+          {img && <img src={img} className="h-12 w-12 object-cover rounded-lg border" alt="preview" />}
+        </div>
+        <div className="pt-8 border-t flex justify-end gap-2"><button type="submit" className="bg-purple-700 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-purple-800 transition-all">게시글 저장</button><button type="button" onClick={()=>navigate(-1)} className="bg-gray-100 text-gray-500 px-8 py-4 rounded-full">취소</button></div>
+      </form>
+    </div>
+  );
+};
+
+const PostView = () => {
+  const { type, id } = useParams<{ type: string; id: string }>();
+  const navigate = useNavigate();
+  const { posts, deletePost } = useBoardStore();
+  const post = posts.find(p => p.id === id);
+
+  if (!post) return <div className="p-20 text-center">글을 찾을 수 없습니다. <button onClick={()=>navigate(-1)} className="text-purple-600 block mx-auto mt-4">뒤로가기</button></div>;
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto">
+      <div className="bg-purple-900 text-white px-8 py-12">
+        <Link to={`/board/${type}`} className="text-purple-300 text-sm mb-4 inline-block hover:text-white transition-colors flex items-center"><ChevronRight className="rotate-180 mr-1 h-4 w-4" /> 목록으로 돌아가기</Link>
+        <h2 className="text-3xl font-bold mb-6">{post.title}</h2>
+        <div className="flex text-sm text-purple-200 gap-6 opacity-70"><div className="flex items-center"><User className="mr-2 h-4 w-4" /> {post.author}</div><div className="flex items-center"><Calendar className="mr-2 h-4 w-4" /> {new Date(post.createdAt).toLocaleString()}</div></div>
+      </div>
+      <div className="p-8 md:p-16">
+        <div className="prose max-w-none text-gray-800 leading-relaxed text-lg whitespace-pre-wrap mb-12">{post.content}</div>
+        {post.imageUrl && <div className="mb-12 rounded-3xl overflow-hidden border bg-gray-50"><img src={post.imageUrl} className="w-full h-auto max-h-[800px] object-contain mx-auto" alt="content" /></div>}
+        <div className="flex justify-between border-t pt-8"><button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200">목록</button><button onClick={()=>{if(confirm('삭제할까요?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm"><Trash2 className="mr-2 h-4 w-4" /> 삭제하기</button></div>
+      </div>
+    </div>
+  );
+};
+
+// --- App Root ---
+const App = () => (
+  <Router>
+    <div className="min-h-screen flex flex-col bg-gray-50 selection:bg-purple-100 selection:text-purple-900">
+      <Navbar />
+      <main className="flex-grow">
+        <Breadcrumb />
+        <div className="max-w-7xl mx-auto px-4 py-10 md:py-20">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/intro/greetings" element={<PageLayout title="대표인사말"><div className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 max-w-4xl mx-auto leading-relaxed text-gray-700">
-              <h2 className="text-3xl font-bold text-purple-900 mb-8 border-b pb-4">대표인사말</h2>
-              <p className="mb-6 font-bold text-xl">"함께 돌보고, 함께 살아가는 지역을 꿈꾸며"</p>
-              <p className="mb-4">안녕하십니까? 꿈뜨레 지역공동체 대표 이한기입니다.</p>
-              <p className="mb-4">저희 공동체는 창원시 다함께돌봄센터 7호점을 운영하며 우리 아이들이 안전하고 따뜻한 환경에서 자라날 수 있도록 돕고 있습니다. 또한 2026년부터는 3호점 위탁 운영을 통해 더 넓은 돌봄의 가치를 실현하고자 합니다.</p>
-              <p className="mb-8">주민 여러분의 따뜻한 관심과 참여 부탁드립니다.</p>
-              <div className="text-right"><p className="text-gray-400 mb-1">2025년 2월</p><p className="text-2xl font-bold">대표 이 한 기</p></div>
-            </div></PageLayout>} />
-            <Route path="/intro/history" element={<PageLayout title="연혁"><div className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold text-purple-900 mb-8">단체 연혁</h2>
-              <div className="space-y-8 border-l-4 border-yellow-100 pl-8 relative">
-                {[
-                  { year: '2026', desc: '창원시 다함께돌봄센터 3호점 위탁운영 예정' },
-                  { year: '2025', desc: '창원시 비영리민간단체 공익활동 지원사업 선정' },
-                  { year: '2024', desc: '창원시 다함께돌봄센터 7호점 위탁운영' },
-                  { year: '2023', desc: '꿈뜨레 지역공동체로 명칭 변경 등록' },
-                ].
+            <Route path="/intro/greetings" element={<Greetings />} />
+            <Route path="/intro/history" element={<History />} />
+            <Route path="/intro" element={<Navigate to="/intro/greetings" replace />} />
+            <Route path="/donation/account" element={<AccountInfo />} />
+            <Route path="/donation" element={<Navigate to="/donation/account" replace />} />
+            <Route path="/board/:type" element={<BoardList />} />
+            <Route path="/board/:type/write" element={<PostWrite />} />
+            <Route path="/board/:type/view/:id" element={<PostView />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  </Router>
+);
+
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+root.render(<React.StrictMode><App /></React.StrictMode>);
