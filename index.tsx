@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { 
   HashRouter as Router, 
@@ -16,7 +16,7 @@ import {
   Search, Newspaper, Menu, X, ChevronDown, 
   Phone, Mail, Instagram, Facebook, Globe, Plus, FileText, 
   Trash2, Calendar, User, Save, ClipboardCheck,
-  Gift, Receipt, Edit3, Quote, ExternalLink
+  Gift, Receipt, Edit3, Quote, ExternalLink, Image as ImageIcon, Loader2
 } from 'lucide-react';
 
 // --- Types ---
@@ -29,8 +29,8 @@ interface Post {
   content: string;
   author: string;
   createdAt: number;
-  imageUrl?: string;
-  imageUrls?: string[];
+  imageUrl?: string; // Main representative image
+  imageUrls?: string[]; // Multiple images array
 }
 
 interface SiteSettings {
@@ -76,6 +76,36 @@ const RELATED_SITES = [
   { name: '창원시청', url: 'https://www.changwon.go.kr', description: '변화의 시작, 창원특례시' },
 ];
 
+// --- Utility: Image Compression ---
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000; // Limit width for storage efficiency
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = (height * MAX_WIDTH) / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        // Compress to JPEG with 0.7 quality
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+    };
+  });
+};
+
 // --- Stores (Hooks) ---
 const useBoardStore = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -88,10 +118,15 @@ const useBoardStore = () => {
   }, []);
 
   const addPost = useCallback((post: Post) => {
-    const next = [post, ...posts];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setPosts(next);
-    return true;
+    try {
+      const next = [post, ...posts];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setPosts(next);
+      return true;
+    } catch (e) {
+      alert('저장 용량이 부족합니다. 사진 크기를 줄이거나 기존 게시글을 삭제해 주세요.');
+      return false;
+    }
   }, [posts]);
 
   const deletePost = useCallback((id: string) => {
@@ -264,7 +299,7 @@ const Footer = () => (
           <h4 className="text-white font-bold mb-6">연락처 및 위치</h4>
           <ul className="space-y-4 text-sm">
             <li className="flex items-start">
-              <MapPin className="h-5 w-5 text-purple-400 mr-3 shrink-0" />
+              <MapPin className="h-5 w-5 text-purple-400 mr-3 shrink-0 mt-1" />
               <div>
                 <span className="text-white block font-semibold">현) 경남 창원시 마산회원구 내서읍 삼계6길 40 202호</span>
                 <span className="text-[11px] text-gray-600 italic">이전) 경남 창원시 마산회원구 내서읍 삼계6길 12 301호</span>
@@ -338,7 +373,6 @@ const Home = () => {
             </div>
           </div>
 
-          {/* 관련 기관 섹션 */}
           <div className="text-center mb-10 mt-20">
             <h2 className="text-2xl font-bold text-gray-900">관련 기관 바로가기</h2>
             <p className="text-gray-500 mt-2">꿈뜨레 지역공동체와 함께하는 주요 공공기관입니다.</p>
@@ -493,7 +527,10 @@ const BoardList = () => {
               {posts.length > 0 ? posts.map((p, i) => (
                 <tr key={p.id} className="hover:bg-purple-50 transition-colors">
                   <td className="px-6 py-4 text-gray-400 text-sm">{posts.length - i}</td>
-                  <td className="px-6 py-4 font-bold text-gray-800"><Link to={`/board/${boardType}/view/${p.id}`} className="hover:text-purple-700">{p.title}</Link></td>
+                  <td className="px-6 py-4 font-bold text-gray-800 flex items-center gap-2">
+                    <Link to={`/board/${boardType}/view/${p.id}`} className="hover:text-purple-700">{p.title}</Link>
+                    {(p.imageUrls && p.imageUrls.length > 0) && <ImageIcon className="h-4 w-4 text-purple-300" />}
+                  </td>
                   <td className="px-6 py-4 text-gray-400 text-sm">{new Date(p.createdAt).toLocaleDateString()}</td>
                 </tr>
               )) : <tr><td colSpan={3} className="px-6 py-20 text-center text-gray-300">등록된 글이 없습니다.</td></tr>}
@@ -511,22 +548,43 @@ const PostWrite = () => {
   const { addPost } = useBoardStore();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [img, setImg] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImg(e.target?.result as string);
-      reader.readAsDataURL(file);
+  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setIsCompressing(true);
+      const compressed: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const data = await compressImage(files[i]);
+        compressed.push(data);
+      }
+      setImages(prev => [...prev, ...compressed]);
+      setIsCompressing(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !content) return alert('제목과 내용을 입력해 주세요.');
-    addPost({ id: Date.now().toString(), type: type as BoardType, title, content, author: '관리자', createdAt: Date.now(), imageUrl: img });
-    navigate(`/board/${type}`);
+    const success = addPost({ 
+      id: Date.now().toString(), 
+      type: type as BoardType, 
+      title, 
+      content, 
+      author: '관리자', 
+      createdAt: Date.now(), 
+      imageUrl: images.length > 0 ? images[0] : undefined,
+      imageUrls: images 
+    });
+    if (success) navigate(`/board/${type}`);
   };
 
   return (
@@ -535,12 +593,36 @@ const PostWrite = () => {
       <form onSubmit={handleSubmit} className="p-8 space-y-6">
         <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="제목" className="w-full p-4 bg-gray-50 rounded-xl border-none text-xl font-bold focus:ring-2 focus:ring-purple-200 outline-none" required />
         <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="내용을 입력해 주세요" rows={10} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-200 outline-none resize-none" required></textarea>
-        <div className="flex items-center gap-4">
-          <input type="file" onChange={handleImage} accept="image/*" className="hidden" id="img-upload" />
-          <label htmlFor="img-upload" className="flex items-center px-6 py-3 bg-purple-50 text-purple-700 rounded-full font-bold cursor-pointer hover:bg-purple-100"><Camera className="mr-2 h-5 w-5" /> 사진 첨부</label>
-          {img && <img src={img} className="h-12 w-12 object-cover rounded-lg border" alt="preview" />}
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <input type="file" ref={imageInputRef} onChange={handleImages} accept="image/*" multiple className="hidden" id="img-upload" />
+            <label htmlFor="img-upload" className="flex items-center px-6 py-3 bg-purple-700 text-white rounded-full font-bold cursor-pointer hover:bg-purple-800 shadow-md transition-all active:scale-95">
+              {isCompressing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Camera className="mr-2 h-5 w-5" />}
+              {isCompressing ? '처리 중...' : '사진 첨부 (여러 장 가능)'}
+            </label>
+            <span className="text-xs text-gray-400">첫 번째 사진이 대표 이미지가 됩니다.</span>
+          </div>
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 pt-2">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 group">
+                  <img src={img} className="w-full h-full object-cover" alt="preview" />
+                  <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="h-3 w-3" />
+                  </button>
+                  {idx === 0 && <span className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-purple-900 text-[10px] font-bold text-center py-0.5">대표</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="pt-8 border-t flex justify-end gap-2"><button type="submit" className="bg-purple-700 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-purple-800 transition-all">게시글 저장</button><button type="button" onClick={()=>navigate(-1)} className="bg-gray-100 text-gray-500 px-8 py-4 rounded-full">취소</button></div>
+
+        <div className="pt-8 border-t flex justify-end gap-2">
+          <button type="submit" disabled={isCompressing} className="bg-purple-700 text-white px-10 py-4 rounded-full font-bold shadow-lg hover:bg-purple-800 transition-all disabled:opacity-50">게시글 저장</button>
+          <button type="button" onClick={()=>navigate(-1)} className="bg-gray-100 text-gray-500 px-8 py-4 rounded-full">취소</button>
+        </div>
       </form>
     </div>
   );
@@ -554,6 +636,8 @@ const PostView = () => {
 
   if (!post) return <div className="p-20 text-center">글을 찾을 수 없습니다.</div>;
 
+  const displayImages = post.imageUrls || (post.imageUrl ? [post.imageUrl] : []);
+
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto">
       <div className="bg-purple-900 text-white px-8 py-12">
@@ -563,8 +647,21 @@ const PostView = () => {
       </div>
       <div className="p-8 md:p-16">
         <div className="prose max-w-none text-gray-800 leading-relaxed text-lg whitespace-pre-wrap mb-12">{post.content}</div>
-        {post.imageUrl && <div className="mb-12 rounded-3xl overflow-hidden border bg-gray-50"><img src={post.imageUrl} className="w-full h-auto max-h-[800px] object-contain mx-auto" alt="content" /></div>}
-        <div className="flex justify-between border-t pt-8"><button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200">목록</button><button onClick={()=>{if(confirm('삭제하시겠습니까?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm"><Trash2 className="mr-2 h-4 w-4" /> 삭제</button></div>
+        
+        {displayImages.length > 0 && (
+          <div className="space-y-8 mb-12 border-t pt-12">
+            <h3 className="text-xl font-bold flex items-center text-purple-900"><ImageIcon className="mr-2 h-6 w-6" /> 관련 사진</h3>
+            <div className="grid gap-8">
+              {displayImages.map((img, idx) => (
+                <div key={idx} className="rounded-2xl overflow-hidden border bg-gray-50 shadow-sm">
+                  <img src={img} className="w-full h-auto max-h-[1000px] object-contain mx-auto" alt={`content-${idx}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between border-t pt-8"><button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200 font-bold">목록</button><button onClick={()=>{if(confirm('삭제하시겠습니까?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm font-bold"><Trash2 className="mr-2 h-4 w-4" /> 삭제</button></div>
       </div>
     </div>
   );
