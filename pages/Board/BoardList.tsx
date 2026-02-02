@@ -11,14 +11,31 @@ const BoardList: React.FC = () => {
   const { getPostsByType } = useBoardStore();
   
   const posts = getPostsByType(boardType);
-  const boardTitle = boardType === 'projects' ? '주요사업' : '공지사항';
+  
+  const getBoardTitle = () => {
+    switch(boardType) {
+      case 'projects': return '주요사업';
+      case 'notices': return '공지사항';
+      case 'donations': return '후원소식';
+      default: return '게시판';
+    }
+  };
+
+  const getBoardDesc = () => {
+    switch(boardType) {
+      case 'donations': return '여러분의 소중한 후원금이 어떻게 쓰였는지 투명하게 알려드립니다.';
+      default: return '꿈뜨레의 다양한 활동과 소식을 전해드립니다.';
+    }
+  };
+
+  const boardTitle = getBoardTitle();
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[600px]">
       <div className="bg-purple-900 text-white px-8 py-10 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold">{boardTitle}</h2>
-          <p className="text-purple-200 text-sm mt-1">꿈뜨레의 다양한 활동과 소식을 전해드립니다.</p>
+          <p className="text-purple-200 text-sm mt-1">{getBoardDesc()}</p>
         </div>
         <Link 
           to={`/board/${boardType}/write`}
@@ -50,24 +67,27 @@ const BoardList: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {posts.length > 0 ? (
-                posts.map((post, idx) => (
-                  <tr key={post.id} className="hover:bg-purple-50 transition-colors cursor-pointer group">
-                    <td className="px-6 py-4 text-gray-400">{posts.length - idx}</td>
-                    <td className="px-6 py-4">
-                      <Link to={`/board/${boardType}/view/${post.id}`} className="flex items-center">
-                        <span className="font-medium text-gray-900 group-hover:text-purple-700 transition-colors">
-                          {post.title}
-                        </span>
-                        {post.imageUrl && <ImageIcon className="ml-2 h-4 w-4 text-purple-300" />}
-                        {post.fileName && <FileText className="ml-2 h-4 w-4 text-blue-300" />}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{post.author}</td>
-                    <td className="px-6 py-4 text-gray-400 text-sm">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))
+                posts.map((post, idx) => {
+                  const hasImages = (post.imageUrls && post.imageUrls.length > 0) || post.imageUrl;
+                  return (
+                    <tr key={post.id} className="hover:bg-purple-50 transition-colors cursor-pointer group">
+                      <td className="px-6 py-4 text-gray-400">{posts.length - idx}</td>
+                      <td className="px-6 py-4">
+                        <Link to={`/board/${boardType}/view/${post.id}`} className="flex items-center">
+                          <span className="font-medium text-gray-900 group-hover:text-purple-700 transition-colors">
+                            {post.title}
+                          </span>
+                          {hasImages && <ImageIcon className="ml-2 h-4 w-4 text-purple-300" />}
+                          {post.fileName && <FileText className="ml-2 h-4 w-4 text-blue-300" />}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{post.author}</td>
+                      <td className="px-6 py-4 text-gray-400 text-sm">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={4} className="px-6 py-20 text-center text-gray-400">

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Trash2, Calendar, User, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, User, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import { useBoardStore } from '../../store/boardStore';
 
 const PostView: React.FC = () => {
@@ -29,7 +29,19 @@ const PostView: React.FC = () => {
     }
   };
 
-  const boardTitle = type === 'projects' ? '주요사업' : '공지사항';
+  const getBoardTitle = () => {
+    switch(type) {
+      case 'projects': return '주요사업';
+      case 'notices': return '공지사항';
+      case 'donations': return '후원소식';
+      default: return '게시판';
+    }
+  };
+
+  const boardTitle = getBoardTitle();
+
+  // Support both old posts with single imageUrl and new posts with imageUrls array
+  const displayImages = post.imageUrls || (post.imageUrl ? [post.imageUrl] : []);
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -37,7 +49,7 @@ const PostView: React.FC = () => {
         <Link to={`/board/${type}`} className="inline-flex items-center text-purple-200 hover:text-white mb-4 transition-colors">
           <ArrowLeft className="mr-2 h-4 w-4" /> {boardTitle} 목록으로
         </Link>
-        <h2 className="text-3xl font-bold">{post.title}</h2>
+        <h2 className="text-3xl font-bold leading-tight">{post.title}</h2>
         <div className="flex flex-wrap gap-6 mt-6 text-purple-100 text-sm">
           <div className="flex items-center"><User className="mr-2 h-4 w-4" /> {post.author}</div>
           <div className="flex items-center"><Calendar className="mr-2 h-4 w-4" /> {new Date(post.createdAt).toLocaleString()}</div>
@@ -45,18 +57,34 @@ const PostView: React.FC = () => {
       </div>
 
       <div className="p-8 md:p-12">
-        <div className="prose prose-purple max-w-none mb-12 min-h-[300px] whitespace-pre-wrap text-gray-800 leading-relaxed text-lg">
+        {/* Content Area */}
+        <div className="prose prose-purple max-w-none mb-12 min-h-[200px] whitespace-pre-wrap text-gray-800 leading-relaxed text-lg">
           {post.content}
         </div>
 
-        {post.imageUrl && (
-          <div className="my-8 rounded-2xl overflow-hidden border border-gray-100 max-w-2xl">
-            <img src={post.imageUrl} alt="attached" className="w-full h-auto" />
+        {/* Multi Image Gallery */}
+        {displayImages.length > 0 && (
+          <div className="space-y-6 my-12 pt-12 border-t border-gray-50">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center">
+              <ImageIcon className="mr-2 h-6 w-6 text-purple-600" /> 활동 사진
+            </h3>
+            <div className="grid grid-cols-1 gap-8 max-w-3xl mx-auto">
+              {displayImages.map((url, index) => (
+                <div key={index} className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50">
+                  <img 
+                    src={url} 
+                    alt={`activity-${index}`} 
+                    className="w-full h-auto object-contain max-h-[800px] block mx-auto" 
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Attachment Area */}
         {post.fileName && (
-          <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
+          <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between mt-12">
             <div className="flex items-center">
               <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
                 <FileText className="h-6 w-6 text-blue-600" />
@@ -87,7 +115,7 @@ const PostView: React.FC = () => {
             onClick={handleDelete}
             className="px-8 py-3 bg-red-50 text-red-600 rounded-full hover:bg-red-100 font-bold transition-all flex items-center"
           >
-            <Trash2 className="mr-2 h-5 w-5" /> 삭제하기
+            <Trash2 className="mr-2 h-5 w-5" /> 게시글 삭제
           </button>
         </div>
       </div>

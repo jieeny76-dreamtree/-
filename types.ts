@@ -1,5 +1,5 @@
 
-export type BoardType = 'projects' | 'notices';
+export type BoardType = 'projects' | 'notices' | 'donations';
 
 export interface Post {
   id: string;
@@ -8,9 +8,16 @@ export interface Post {
   content: string;
   author: string;
   createdAt: number;
-  imageUrl?: string;
+  imageUrl?: string; // Thumbnail or primary image
+  imageUrls?: string[]; // Multiple images array
   fileName?: string;
   fileData?: string; // base64 simulated file storage
+}
+
+export interface SiteSettings {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
 }
 
 export interface NavigationItem {

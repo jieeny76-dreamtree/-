@@ -9,6 +9,7 @@ import History from './pages/Intro/History';
 import BoardList from './pages/Board/BoardList';
 import PostWrite from './pages/Board/PostWrite';
 import PostView from './pages/Board/PostView';
+import AccountInfo from './pages/Donation/AccountInfo';
 
 const Breadcrumb: React.FC = () => {
   const location = useLocation();
@@ -23,8 +24,14 @@ const Breadcrumb: React.FC = () => {
     category = "단체소개";
     pageName = path.includes('greetings') ? "대표인사말" : "연혁";
   } else if (path.includes('/board/')) {
-    category = path.includes('projects') ? "주요사업" : "공지사항";
+    if (path.includes('projects')) category = "주요사업";
+    else if (path.includes('notices')) category = "공지사항";
+    else if (path.includes('donations')) category = "후원소식";
+    
     pageName = path.includes('write') ? "글쓰기" : path.includes('view') ? "상세보기" : "목록";
+  } else if (path.includes('/donation/')) {
+    category = "후원안내";
+    pageName = "계좌안내";
   }
 
   return (
@@ -68,6 +75,10 @@ const App: React.FC = () => {
             <Route path="/intro/greetings" element={<PageLayout><Greetings /></PageLayout>} />
             <Route path="/intro/history" element={<PageLayout><History /></PageLayout>} />
             <Route path="/intro" element={<Navigate to="/intro/greetings" replace />} />
+            
+            {/* Donation Pages */}
+            <Route path="/donation/account" element={<PageLayout><AccountInfo /></PageLayout>} />
+            <Route path="/donation" element={<Navigate to="/donation/account" replace />} />
             
             {/* Board Pages */}
             <Route path="/board/:type" element={<PageLayout><BoardList /></PageLayout>} />

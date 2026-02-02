@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Camera, Paperclip, X, Save, ArrowLeft } from 'lucide-react';
+import { Camera, Paperclip, X, Save, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { useBoardStore } from '../../store/boardStore';
 import { BoardType, Post } from '../../types';
 
@@ -14,14 +14,13 @@ const PostWrite: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [author, setAuthor] = useState('관리자');
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [file, setFile] = useState<{ name: string; data: string } | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to compress image using Canvas
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -31,7 +30,7 @@ const PostWrite: React.FC = () => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1024; // Resize to max 1024px width
+          const MAX_WIDTH = 1200; 
           let width = img.width;
           let height = img.height;
 
@@ -44,8 +43,6 @@ const PostWrite: React.FC = () => {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Output as compressed JPEG (0.7 quality is a good balance)
           resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
       };
@@ -53,25 +50,34 @@ const PostWrite: React.FC = () => {
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
       setIsCompressing(true);
+      const newImages: string[] = [];
       try {
-        const compressedData = await compressImage(selectedFile);
-        setImage(compressedData);
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const compressedData = await compressImage(selectedFiles[i]);
+          newImages.push(compressedData);
+        }
+        setImages(prev => [...prev, ...newImages]);
       } catch (err) {
         console.error("Image compression failed", err);
         alert("이미지 처리 중 오류가 발생했습니다.");
       } finally {
         setIsCompressing(false);
+        if (imageInputRef.current) imageInputRef.current.value = "";
       }
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.size > 1024 * 1024 * 2) { // Limit files to 2MB for localStorage safety
+      if (selectedFile.size > 1024 * 1024 * 2) { 
         alert("파일 용량이 너무 큽니다. (최대 2MB)");
         return;
       }
@@ -100,7 +106,8 @@ const PostWrite: React.FC = () => {
       content,
       author,
       createdAt: Date.now(),
-      imageUrl: image || undefined,
+      imageUrl: images.length > 0 ? images[0] : undefined,
+      imageUrls: images.length > 0 ? images : undefined,
       fileName: file?.name,
       fileData: file?.data
     };
@@ -111,7 +118,16 @@ const PostWrite: React.FC = () => {
     }
   };
 
-  const boardTitle = boardType === 'projects' ? '주요사업' : '공지사항';
+  const getBoardTitle = () => {
+    switch(boardType) {
+      case 'projects': return '주요사업';
+      case 'notices': return '공지사항';
+      case 'donations': return '후원소식';
+      default: return '게시판';
+    }
+  };
+
+  const boardTitle = getBoardTitle();
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -159,59 +175,75 @@ const PostWrite: React.FC = () => {
           </div>
         </div>
 
-        {/* Media Attachments */}
         <div className="flex flex-wrap gap-4">
           <div className="space-y-2">
             <button
               type="button"
               disabled={isCompressing}
               onClick={() => imageInputRef.current?.click()}
-              className={`flex items-center px-4 py-2 rounded-lg transition-colors ${isCompressing ? 'bg-gray-100 text-gray-400' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
+              className={`flex items-center px-5 py-3 rounded-xl transition-all font-bold ${isCompressing ? 'bg-gray-100 text-gray-400' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-md active:scale-95'}`}
             >
-              <Camera className="mr-2 h-4 w-4" /> {isCompressing ? '압축 중...' : '사진 첨부'}
+              <Camera className="mr-2 h-5 w-5" /> {isCompressing ? '사진 처리 중...' : '사진 여러장 첨부'}
             </button>
-            <input type="file" ref={imageInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+            <input 
+              type="file" 
+              ref={imageInputRef} 
+              onChange={handleImageChange} 
+              accept="image/*" 
+              multiple 
+              className="hidden" 
+            />
           </div>
 
           <div className="space-y-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+              className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all shadow-md active:scale-95"
             >
-              <Paperclip className="mr-2 h-4 w-4" /> 파일 첨부
+              <Paperclip className="mr-2 h-5 w-5" /> 파일 첨부
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
           </div>
         </div>
 
-        {/* Previews */}
-        <div className="flex flex-wrap gap-4">
-          {image && (
-            <div className="relative inline-block">
-              <img src={image} alt="preview" className="h-32 w-32 object-cover rounded-xl border border-gray-200" />
-              <button
-                type="button"
-                onClick={() => setImage(null)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg"
-              >
-                <X className="h-4 w-4" />
-              </button>
+        {/* Image Previews */}
+        {images.length > 0 && (
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-gray-700">첨부된 사진 ({images.length})</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {images.map((img, index) => (
+                <div key={index} className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-gray-100 bg-gray-50">
+                  <img src={img} alt={`preview-${index}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  {index === 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-yellow-400 text-purple-900 text-[10px] font-bold text-center py-1">
+                      대표 이미지
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {file && (
-            <div className="flex items-center p-3 bg-gray-100 rounded-xl border border-gray-200">
-              <Paperclip className="h-4 w-4 mr-2 text-gray-500" />
-              <span className="text-sm text-gray-700 mr-2 truncate max-w-[200px]">{file.name}</span>
-              <button type="button" onClick={() => setFile(null)} className="text-red-500 hover:text-red-700">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
+        {/* File Preview */}
+        {file && (
+          <div className="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-100 max-w-md">
+            <Paperclip className="h-5 w-5 mr-3 text-blue-500" />
+            <span className="text-sm font-medium text-blue-900 mr-4 truncate flex-grow">{file.name}</span>
+            <button type="button" onClick={() => setFile(null)} className="text-red-500 hover:bg-red-50 p-1 rounded-full transition-colors">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        )}
 
-        {/* Submit Buttons */}
         <div className="flex justify-between pt-8 border-t border-gray-100">
           <button
             type="button"
@@ -225,7 +257,7 @@ const PostWrite: React.FC = () => {
             disabled={isCompressing}
             className="px-10 py-3 bg-purple-700 text-white rounded-full hover:bg-purple-800 font-bold transition-all shadow-lg flex items-center disabled:opacity-50"
           >
-            <Save className="mr-2 h-5 w-5" /> 저장하기
+            <Save className="mr-2 h-5 w-5" /> 게시글 저장
           </button>
         </div>
       </form>
