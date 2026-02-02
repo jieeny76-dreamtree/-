@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { 
   HashRouter as Router, 
@@ -12,14 +12,14 @@ import {
   useNavigate 
 } from 'react-router-dom';
 import { 
-  Heart, Users, MapPin, ArrowRight, Bell, Camera, ChevronRight, 
-  ExternalLink, Search, Newspaper, Menu, X, ChevronDown, 
+  Heart, MapPin, ArrowRight, Bell, Camera, ChevronRight, 
+  Search, Newspaper, Menu, X, ChevronDown, 
   Phone, Mail, Instagram, Facebook, Globe, Plus, FileText, 
-  Download, Trash2, Calendar, User, Save, Paperclip, ClipboardCheck,
-  Gift, Receipt, Settings, Edit3, Quote
+  Trash2, Calendar, User, Save, ClipboardCheck,
+  Gift, Receipt, Edit3, Quote, ExternalLink
 } from 'lucide-react';
 
-// --- Types & Constants ---
+// --- Types ---
 type BoardType = 'projects' | 'notices' | 'donations';
 
 interface Post {
@@ -31,8 +31,6 @@ interface Post {
   createdAt: number;
   imageUrl?: string;
   imageUrls?: string[];
-  fileName?: string;
-  fileData?: string;
 }
 
 interface SiteSettings {
@@ -40,6 +38,16 @@ interface SiteSettings {
   accountNumber: string;
   accountHolder: string;
 }
+
+// --- Constants ---
+const STORAGE_KEY = 'kkumttre_posts_v2';
+const SETTINGS_KEY = 'kkumttre_settings_v2';
+
+const DEFAULT_SETTINGS: SiteSettings = {
+  bankName: '농협은행',
+  accountNumber: '351-1111-2222-33',
+  accountHolder: '꿈뜨레 지역공동체',
+};
 
 const NAVIGATION = [
   {
@@ -68,16 +76,7 @@ const RELATED_SITES = [
   { name: '창원시청', url: 'https://www.changwon.go.kr', description: '변화의 시작, 창원특례시' },
 ];
 
-const STORAGE_KEY = 'kkumttre_posts_v1';
-const SETTINGS_KEY = 'kkumttre_settings_v1';
-
-const DEFAULT_SETTINGS: SiteSettings = {
-  bankName: '농협은행',
-  accountNumber: '351-1111-2222-33',
-  accountHolder: '꿈뜨레 지역공동체',
-};
-
-// --- Custom Hooks (Stores) ---
+// --- Stores (Hooks) ---
 const useBoardStore = () => {
   const [posts, setPosts] = useState<Post[]>([]);
 
@@ -124,7 +123,7 @@ const useSettingsStore = () => {
   return { settings, updateSettings };
 };
 
-// --- Shared Components ---
+// --- Components ---
 const Logo: React.FC<{ className?: string }> = ({ className = "h-12 w-12" }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M10 45 L50 10 L90 45 V90 H10 Z" stroke="#FBBF24" strokeWidth="6" strokeLinejoin="round" />
@@ -179,20 +178,20 @@ const Navbar = () => {
         </div>
       </div>
       {/* Mobile Menu */}
-      <div className={`fixed inset-0 bg-white z-[100] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-0 bg-white z-[100] transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
             <Logo className="h-10 w-10" />
-            <button onClick={() => setIsOpen(false)} className="p-2 text-gray-400"><X className="h-8 w-8" /></button>
+            <button onClick={() => setIsOpen(false)}><X className="h-8 w-8 text-gray-400" /></button>
           </div>
           <div className="space-y-6 overflow-y-auto">
-            {NAVIGATION.map((item) => (
+            {NAVIGATION.map(item => (
               <div key={item.path} className="border-b border-gray-50 pb-6">
                 <div className="text-xl font-black text-purple-900 mb-4">{item.name}</div>
                 <div className="grid grid-cols-1 gap-4 pl-4">
                   {item.subItems ? (
-                    item.subItems.map((sub) => (
-                      <Link key={sub.path} to={sub.path} onClick={() => setIsOpen(false)} className="text-lg text-gray-600 font-medium active:text-purple-600">{sub.name}</Link>
+                    item.subItems.map(sub => (
+                      <Link key={sub.path} to={sub.path} onClick={() => setIsOpen(false)} className="text-lg text-gray-600 font-medium">{sub.name}</Link>
                     ))
                   ) : (
                     <Link to={item.path} onClick={() => setIsOpen(false)} className="text-lg text-gray-600 font-medium">바로가기</Link>
@@ -200,9 +199,6 @@ const Navbar = () => {
                 </div>
               </div>
             ))}
-          </div>
-          <div className="mt-auto py-8">
-            <Link to="/donation/account" onClick={() => setIsOpen(false)} className="block w-full text-center bg-yellow-400 text-purple-900 font-black py-4 rounded-2xl text-lg shadow-lg">후원 참여하기</Link>
           </div>
         </div>
       </div>
@@ -229,8 +225,8 @@ const Breadcrumb = () => {
     pageName = "계좌안내";
   }
   return (
-    <div className="bg-white border-b border-gray-100 mb-8 py-4">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center text-sm text-gray-500">
+    <div className="bg-white border-b border-gray-100 py-4 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm text-gray-500 flex items-center">
         <Link to="/" className="hover:text-purple-600">홈</Link>
         <span className="mx-2">/</span>
         {category && <><span className="text-gray-400">{category}</span><span className="mx-2">/</span></>}
@@ -249,7 +245,7 @@ const Footer = () => (
             <Logo className="h-10 w-10 grayscale brightness-200" />
             <span className="text-2xl font-black text-white tracking-tighter">꿈뜨레 지역공동체</span>
           </div>
-          <p className="text-sm leading-relaxed mb-8 max-w-sm">아이들이 행복하게 자라고 이웃이 서로를 살피는 따뜻한 마을을 만드는 비영리민간단체입니다.</p>
+          <p className="text-sm leading-relaxed mb-8 max-w-sm">지역 주민과 함께 따뜻한 나눔의 문화를 만들고, 아이들이 행복하게 자랄 수 있는 돌봄 환경을 조성하는 비영리민간단체입니다.</p>
           <div className="flex space-x-4">
             <a href="#" className="h-10 w-10 bg-white/5 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-colors"><Instagram className="h-5 w-5" /></a>
             <a href="#" className="h-10 w-10 bg-white/5 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-colors"><Facebook className="h-5 w-5" /></a>
@@ -270,7 +266,7 @@ const Footer = () => (
             <li className="flex items-start">
               <MapPin className="h-5 w-5 text-purple-400 mr-3 shrink-0" />
               <div>
-                <span className="text-white block">현) 경남 창원시 마산회원구 내서읍 삼계6길 40 202호</span>
+                <span className="text-white block font-semibold">현) 경남 창원시 마산회원구 내서읍 삼계6길 40 202호</span>
                 <span className="text-[11px] text-gray-600 italic">이전) 경남 창원시 마산회원구 내서읍 삼계6길 12 301호</span>
               </div>
             </li>
@@ -299,7 +295,7 @@ const Home = () => {
           <img src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=1600" className="w-full h-full object-cover" alt="bg" />
         </div>
         <div className="relative max-w-4xl mx-auto px-4">
-          <div className="inline-block bg-white/10 backdrop-blur-md p-4 rounded-full mb-8 border border-white/20 animate-bounce"><Logo className="h-16 w-16" /></div>
+          <div className="inline-block bg-white/10 backdrop-blur-md p-4 rounded-full mb-8 border border-white/20"><Logo className="h-16 w-16" /></div>
           <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tighter">꿈을 심고 행복을 가꾸는<br/><span className="text-yellow-400">꿈뜨레 지역공동체</span></h1>
           <p className="text-xl md:text-2xl text-purple-100 mb-12 font-light">아이들이 안전하고 이웃이 서로를 살피는 따뜻한 마을을 만듭니다.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -310,7 +306,7 @@ const Home = () => {
       </section>
 
       <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 mb-12">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-8">
@@ -340,6 +336,29 @@ const Home = () => {
                 )) : <p className="col-span-2 text-gray-300 py-10 text-center">활동 소식이 없습니다.</p>}
               </div>
             </div>
+          </div>
+
+          {/* 관련 기관 섹션 */}
+          <div className="text-center mb-10 mt-20">
+            <h2 className="text-2xl font-bold text-gray-900">관련 기관 바로가기</h2>
+            <p className="text-gray-500 mt-2">꿈뜨레 지역공동체와 함께하는 주요 공공기관입니다.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            {RELATED_SITES.map((site) => (
+              <a
+                key={site.url}
+                href={site.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex flex-col p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all text-left"
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-lg font-bold text-gray-900 group-hover:text-purple-700 transition-colors">{site.name}</span>
+                  <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-500 transition-colors" />
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed">{site.description}</p>
+              </a>
+            ))}
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -389,8 +408,6 @@ const History = () => {
     { year: '2025', desc: '창원시 비영리민간단체 공익활동 지원사업 선정' },
     { year: '2024', desc: '창원시 다함께돌봄센터 7호점 위탁운영 개시' },
     { year: '2023', desc: '비영리민간단체 변경등록 (꿈뜨레 지역공동체)' },
-    { year: '2021', desc: '우리마을 아이돌봄센터 운영' },
-    { year: '2019', desc: '양성평등사업 지원단체 선정' },
     { year: '2017', desc: '마산세무서 비영리단체 등록 (01.12)' },
   ];
   return (
@@ -446,8 +463,8 @@ const AccountInfo = () => {
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Gift className="mr-2 h-5 w-5 text-yellow-500" /> 기부금 영수증</h4><p className="text-sm text-gray-500">꿈뜨레는 지정기부금 단체로, 기부금 영수증 발행을 통해 연말정산 혜택을 받으실 수 있습니다.</p></div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Phone className="mr-2 h-5 w-5 text-blue-500" /> 후원문의</h4><p className="text-sm text-gray-500">정기후원 및 일시후원 관련 문의는 055-232-5412로 연락 부탁드립니다.</p></div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Gift className="mr-2 h-5 w-5 text-yellow-500" /> 기부금 영수증</h4><p className="text-sm text-gray-500">지정기부금 단체로서 기부금 영수증 발행을 통해 연말정산 혜택을 받으실 수 있습니다.</p></div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100"><h4 className="font-bold text-lg mb-2 flex items-center"><Phone className="mr-2 h-5 w-5 text-blue-500" /> 후원문의</h4><p className="text-sm text-gray-500">문의: 055-232-5412</p></div>
       </div>
     </div>
   );
@@ -463,24 +480,23 @@ const BoardList = () => {
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
       <div className="bg-purple-900 text-white px-8 py-10 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div><h2 className="text-3xl font-bold">{titles[boardType] || '게시판'}</h2><p className="text-purple-200 text-sm mt-1">꿈뜨레의 소식을 전해드립니다.</p></div>
+        <div><h2 className="text-3xl font-bold">{titles[boardType] || '게시판'}</h2></div>
         <Link to={`/board/${boardType}/write`} className="bg-yellow-500 hover:bg-yellow-400 text-purple-900 px-6 py-3 rounded-full font-bold shadow-md flex items-center"><Plus className="mr-2 h-5 w-5" /> 글쓰기</Link>
       </div>
       <div className="p-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-400 text-xs uppercase tracking-widest"><tr className="border-b">
-              <th className="px-6 py-4">번호</th><th className="px-6 py-4">제목</th><th className="px-6 py-4">작성자</th><th className="px-6 py-4">날짜</th>
-            </tr></thead>
+            <thead className="bg-gray-50 text-gray-400 text-xs uppercase tracking-widest border-b">
+              <tr><th className="px-6 py-4">번호</th><th className="px-6 py-4">제목</th><th className="px-6 py-4">날짜</th></tr>
+            </thead>
             <tbody className="divide-y divide-gray-50">
               {posts.length > 0 ? posts.map((p, i) => (
                 <tr key={p.id} className="hover:bg-purple-50 transition-colors">
                   <td className="px-6 py-4 text-gray-400 text-sm">{posts.length - i}</td>
-                  <td className="px-6 py-4 font-bold text-gray-800"><Link to={`/board/${boardType}/view/${p.id}`} className="hover:text-purple-700 flex items-center">{p.title} {p.imageUrl && <Camera className="ml-2 h-3 w-3 text-purple-300" />}</Link></td>
-                  <td className="px-6 py-4 text-gray-500 text-sm">{p.author}</td>
+                  <td className="px-6 py-4 font-bold text-gray-800"><Link to={`/board/${boardType}/view/${p.id}`} className="hover:text-purple-700">{p.title}</Link></td>
                   <td className="px-6 py-4 text-gray-400 text-sm">{new Date(p.createdAt).toLocaleDateString()}</td>
                 </tr>
-              )) : <tr><td colSpan={4} className="px-6 py-20 text-center text-gray-300 font-light">등록된 글이 없습니다.</td></tr>}
+              )) : <tr><td colSpan={3} className="px-6 py-20 text-center text-gray-300">등록된 글이 없습니다.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -495,7 +511,7 @@ const PostWrite = () => {
   const { addPost } = useBoardStore();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [img, setImg] = useState<string>('');
+  const [img, setImg] = useState('');
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -508,7 +524,7 @@ const PostWrite = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !content) return alert('모두 입력해주세요.');
+    if (!title || !content) return alert('제목과 내용을 입력해 주세요.');
     addPost({ id: Date.now().toString(), type: type as BoardType, title, content, author: '관리자', createdAt: Date.now(), imageUrl: img });
     navigate(`/board/${type}`);
   };
@@ -517,8 +533,8 @@ const PostWrite = () => {
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
       <div className="bg-purple-900 text-white px-8 py-10 font-bold text-2xl">게시글 작성</div>
       <form onSubmit={handleSubmit} className="p-8 space-y-6">
-        <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full p-4 bg-gray-50 rounded-xl border-none text-xl font-bold focus:ring-2 focus:ring-purple-200 outline-none" required />
-        <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="내용을 입력하세요" rows={12} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-200 outline-none resize-none" required></textarea>
+        <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="제목" className="w-full p-4 bg-gray-50 rounded-xl border-none text-xl font-bold focus:ring-2 focus:ring-purple-200 outline-none" required />
+        <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="내용을 입력해 주세요" rows={10} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-200 outline-none resize-none" required></textarea>
         <div className="flex items-center gap-4">
           <input type="file" onChange={handleImage} accept="image/*" className="hidden" id="img-upload" />
           <label htmlFor="img-upload" className="flex items-center px-6 py-3 bg-purple-50 text-purple-700 rounded-full font-bold cursor-pointer hover:bg-purple-100"><Camera className="mr-2 h-5 w-5" /> 사진 첨부</label>
@@ -536,19 +552,19 @@ const PostView = () => {
   const { posts, deletePost } = useBoardStore();
   const post = posts.find(p => p.id === id);
 
-  if (!post) return <div className="p-20 text-center">글을 찾을 수 없습니다. <button onClick={()=>navigate(-1)} className="text-purple-600 block mx-auto mt-4">뒤로가기</button></div>;
+  if (!post) return <div className="p-20 text-center">글을 찾을 수 없습니다.</div>;
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-5xl mx-auto">
       <div className="bg-purple-900 text-white px-8 py-12">
-        <Link to={`/board/${type}`} className="text-purple-300 text-sm mb-4 inline-block hover:text-white transition-colors flex items-center"><ChevronRight className="rotate-180 mr-1 h-4 w-4" /> 목록으로 돌아가기</Link>
+        <button onClick={()=>navigate(-1)} className="text-purple-300 text-sm mb-4 flex items-center hover:text-white transition-colors"><ChevronRight className="rotate-180 mr-1 h-4 w-4" /> 목록으로</button>
         <h2 className="text-3xl font-bold mb-6">{post.title}</h2>
         <div className="flex text-sm text-purple-200 gap-6 opacity-70"><div className="flex items-center"><User className="mr-2 h-4 w-4" /> {post.author}</div><div className="flex items-center"><Calendar className="mr-2 h-4 w-4" /> {new Date(post.createdAt).toLocaleString()}</div></div>
       </div>
       <div className="p-8 md:p-16">
         <div className="prose max-w-none text-gray-800 leading-relaxed text-lg whitespace-pre-wrap mb-12">{post.content}</div>
         {post.imageUrl && <div className="mb-12 rounded-3xl overflow-hidden border bg-gray-50"><img src={post.imageUrl} className="w-full h-auto max-h-[800px] object-contain mx-auto" alt="content" /></div>}
-        <div className="flex justify-between border-t pt-8"><button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200">목록</button><button onClick={()=>{if(confirm('삭제할까요?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm"><Trash2 className="mr-2 h-4 w-4" /> 삭제하기</button></div>
+        <div className="flex justify-between border-t pt-8"><button onClick={()=>navigate(`/board/${type}`)} className="bg-gray-100 text-gray-600 px-8 py-3 rounded-full hover:bg-gray-200">목록</button><button onClick={()=>{if(confirm('삭제하시겠습니까?')){deletePost(post.id); navigate(`/board/${type}`);}}} className="text-red-400 hover:text-red-600 flex items-center text-sm"><Trash2 className="mr-2 h-4 w-4" /> 삭제</button></div>
       </div>
     </div>
   );
@@ -557,18 +573,16 @@ const PostView = () => {
 // --- App Root ---
 const App = () => (
   <Router>
-    <div className="min-h-screen flex flex-col bg-gray-50 selection:bg-purple-100 selection:text-purple-900">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-grow">
         <Breadcrumb />
-        <div className="max-w-7xl mx-auto px-4 py-10 md:py-20">
+        <div className="max-w-7xl mx-auto px-4 py-10">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/intro/greetings" element={<Greetings />} />
             <Route path="/intro/history" element={<History />} />
-            <Route path="/intro" element={<Navigate to="/intro/greetings" replace />} />
             <Route path="/donation/account" element={<AccountInfo />} />
-            <Route path="/donation" element={<Navigate to="/donation/account" replace />} />
             <Route path="/board/:type" element={<BoardList />} />
             <Route path="/board/:type/write" element={<PostWrite />} />
             <Route path="/board/:type/view/:id" element={<PostView />} />
